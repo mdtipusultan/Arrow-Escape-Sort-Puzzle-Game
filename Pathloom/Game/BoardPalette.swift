@@ -9,14 +9,11 @@ enum BoardPalette {
     static var secondary: SKColor { named("BrandSecondary", fallback: SKColor(red: 0.76, green: 0.42, blue: 0.32, alpha: 1)) }
     static var accent: SKColor { named("AccentColor", fallback: SKColor(red: 0.86, green: 0.62, blue: 0.18, alpha: 1)) }
     static var success: SKColor { named("SuccessColor", fallback: SKColor(red: 0.29, green: 0.58, blue: 0.42, alpha: 1)) }
+    static var arrow: SKColor { SKColor(red: 0.22, green: 0.47, blue: 0.73, alpha: 1) }
+    static var dot: SKColor { SKColor(white: 0.82, alpha: 1) }
 
-    static func fill(for direction: Direction) -> SKColor {
-        switch direction {
-        case .up: primary
-        case .right: accent
-        case .down: secondary
-        case .left: success
-        }
+    static func fill(for _: Direction) -> SKColor {
+        arrow
     }
 
     private static func named(_ name: String, fallback: SKColor) -> SKColor {

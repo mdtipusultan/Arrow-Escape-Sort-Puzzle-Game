@@ -55,7 +55,7 @@ final class GameScene: SKScene {
         tutorialPulse?.removeFromParent()
         guard let node = arrowNodes[arrowID] else { return }
         let ring = SKShapeNode(circleOfRadius: max(board.cellSize * 0.48, 12))
-        ring.strokeColor = BoardPalette.accent
+        ring.strokeColor = BoardPalette.arrow
         ring.lineWidth = 3
         ring.fillColor = .clear
         ring.alpha = 0.9
@@ -91,22 +91,31 @@ final class GameScene: SKScene {
             return
         }
         clearTutorialPulse()
-        let destination = board.exitPoint(from: arrow.position, direction: arrow.direction)
+        var waypoints = board.pathPoints(
+            from: arrow.position,
+            direction: arrow.direction,
+            gridSize: engine.level.gridSize
+        )
+        if waypoints.isEmpty {
+            waypoints = [board.exitPoint(from: arrow.position, direction: arrow.direction)]
+        }
         let distance = PathCalculator.stepsToEdge(
             from: arrow.position,
             direction: arrow.direction,
             gridSize: engine.level.gridSize
         )
         let duration = interpolatedDuration(steps: distance)
-        spawnTrail(from: node, color: BoardPalette.fill(for: arrow.direction))
+        spawnArrowTrail(from: node, along: waypoints, duration: duration)
 
-        let move = SKAction.move(to: destination, duration: duration)
-        move.timingMode = .easeIn
-        let fade = SKAction.group([
-            SKAction.fadeOut(withDuration: AppConstants.Animation.fadeExit),
-            SKAction.scale(to: 0.72, duration: AppConstants.Animation.fadeExit)
-        ])
-        node.run(SKAction.sequence([move, fade, SKAction.removeFromParent()])) { [weak self] in
+        var moves: [SKAction] = []
+        let stepDuration = duration / Double(max(waypoints.count, 1))
+        for (index, point) in waypoints.enumerated() {
+            let move = SKAction.move(to: point, duration: stepDuration)
+            move.timingMode = index == waypoints.count - 1 ? .easeIn : .linear
+            moves.append(move)
+        }
+        let fade = SKAction.fadeOut(withDuration: AppConstants.Animation.fadeExit)
+        node.run(SKAction.sequence(moves + [fade, SKAction.removeFromParent()])) { [weak self] in
             self?.arrowNodes[arrowID] = nil
             completion()
         }
@@ -124,7 +133,7 @@ final class GameScene: SKScene {
         emitter.particleAlphaSpeed = -1.1
         emitter.particleScale = 0.12
         emitter.particleScaleSpeed = -0.1
-        emitter.particleColor = BoardPalette.accent
+        emitter.particleColor = BoardPalette.arrow
         emitter.particleColorBlendFactor = 1
         emitter.particleTexture = SKTexture(image: sparkImage())
         emitter.zPosition = 50
@@ -214,24 +223,24 @@ final class GameScene: SKScene {
         return AppConstants.Animation.moveMin + (AppConstants.Animation.moveMax - AppConstants.Animation.moveMin) * t
     }
 
-    private func spawnTrail(from node: SKNode, color: SKColor) {
-        let emitter = SKEmitterNode()
-        emitter.particleBirthRate = 28
-        emitter.particleLifetime = 0.35
-        emitter.particleAlpha = 0.45
-        emitter.particleAlphaSpeed = -1.2
-        emitter.particleScale = 0.08
-        emitter.particleScaleSpeed = -0.15
-        emitter.particleColor = color
-        emitter.particleColorBlendFactor = 1
-        emitter.particleTexture = SKTexture(image: sparkImage())
-        emitter.targetNode = self
-        emitter.zPosition = 8
-        node.addChild(emitter)
-        emitter.run(SKAction.sequence([
-            SKAction.wait(forDuration: 0.55),
-            SKAction.removeFromParent()
-        ]))
+    private func spawnArrowTrail(from node: ArrowNode, along waypoints: [CGPoint], duration: TimeInterval) {
+        guard !waypoints.isEmpty else { return }
+        for index in 1...3 {
+            let ghost = node.makeTrailGhost()
+            ghost.position = node.position
+            ghost.zPosition = 8
+            ghost.alpha = 0.34 - CGFloat(index) * 0.08
+            addChild(ghost)
+            var moves: [SKAction] = [SKAction.wait(forDuration: 0.045 * Double(index))]
+            let stepDuration = duration / Double(max(waypoints.count, 1))
+            for point in waypoints {
+                moves.append(SKAction.move(to: point, duration: stepDuration))
+            }
+            ghost.run(SKAction.sequence(moves + [
+                SKAction.fadeOut(withDuration: 0.12),
+                SKAction.removeFromParent()
+            ]))
+        }
     }
 
     private func sparkImage() -> UIImage {

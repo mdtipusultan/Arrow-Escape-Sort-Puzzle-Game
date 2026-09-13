@@ -7,7 +7,7 @@ struct OnboardingView: View {
 
     private let pages: [(title: String, body: String)] = [
         ("Think Ahead", "Each arrow slips off the board only if nothing stands in its way. Order is everything."),
-        ("Find the Path", "Tap an arrow facing a clear route to the edge. It glides out and the board opens up."),
+        ("Find the Path", "Tap an arrow facing a clear route to the edge. It glides from dot to dot until it leaves."),
         ("Clear Every Arrow", "Remove them all to complete the weave. Later boards hide longer chains and clever traps.")
     ]
 
@@ -64,33 +64,55 @@ struct OnboardingView: View {
     private func onboardingArt(for index: Int) -> some View {
         switch index {
         case 0:
-            HStack(spacing: 12) {
-                miniArrow(.right, color: PathloomPalette.accent)
-                miniArrow(.up, color: PathloomPalette.primary)
-                miniArrow(.left, color: PathloomPalette.success)
+            dottedCard {
+                HStack(spacing: 28) {
+                    PuzzleArrowView(direction: .left, size: 32)
+                    PuzzleArrowView(direction: .up, size: 32)
+                    PuzzleArrowView(direction: .right, size: 32)
+                }
             }
         case 1:
             PathDemoView()
         default:
-            VStack(spacing: 10) {
-                HStack(spacing: 10) {
-                    miniArrow(.down, color: PathloomPalette.secondary)
-                    miniArrow(.right, color: PathloomPalette.accent)
+            dottedCard {
+                HStack(spacing: 18) {
+                    PuzzleArrowView(direction: .up, style: .turnRight, size: 28)
+                    PuzzleArrowView(direction: .right, size: 28)
+                    PuzzleArrowView(direction: .down, style: .turnLeft, size: 28)
+                    PuzzleArrowView(direction: .left, size: 28)
                 }
-                Text("Choose the order")
-                    .font(.system(.footnote, design: .rounded).weight(.medium))
-                    .foregroundStyle(PathloomPalette.mutedText)
             }
         }
     }
 
-    private func miniArrow(_ direction: Direction, color: Color) -> some View {
-        Image(systemName: "arrow.up")
-            .font(.system(size: 34, weight: .bold))
-            .foregroundStyle(color)
-            .rotationEffect(.radians(Double(direction.rotationRadians)))
-            .frame(width: 64, height: 64)
-            .background(PathloomPalette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    private func dottedCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(PathloomPalette.card)
+            DottedField()
+                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            content()
+        }
+        .padding(.horizontal, 24)
+    }
+}
+
+private struct DottedField: View {
+    var body: some View {
+        Canvas { context, size in
+            let spacing: CGFloat = 18
+            var y: CGFloat = 16
+            while y < size.height - 10 {
+                var x: CGFloat = 16
+                while x < size.width - 10 {
+                    let rect = CGRect(x: x, y: y, width: 3, height: 3)
+                    context.fill(Path(ellipseIn: rect), with: .color(PathloomPalette.divider.opacity(0.85)))
+                    x += spacing
+                }
+                y += spacing
+            }
+        }
+        .opacity(0.9)
     }
 }
 
@@ -102,29 +124,22 @@ private struct PathDemoView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(PathloomPalette.card)
-            HStack(spacing: 18) {
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundStyle(PathloomPalette.accent)
-                    .offset(x: offset)
-                    .opacity(opacity)
-                Spacer()
-                Capsule()
-                    .fill(PathloomPalette.primary.opacity(0.2))
-                    .frame(width: 8, height: 48)
-            }
-            .padding(36)
+            DottedField()
+                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            PuzzleArrowView(direction: .right, size: 36)
+                .offset(x: offset - 70)
+                .opacity(opacity)
         }
         .padding(.horizontal, 24)
         .task {
             while !Task.isCancelled {
                 offset = 0
                 opacity = 1
-                withAnimation(.easeIn(duration: 0.55)) {
-                    offset = 90
+                withAnimation(.easeIn(duration: 0.85)) {
+                    offset = 150
                     opacity = 0.15
                 }
-                try? await Task.sleep(for: .seconds(1.1))
+                try? await Task.sleep(for: .seconds(1.35))
             }
         }
     }

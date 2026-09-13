@@ -8,7 +8,7 @@ struct PathloomLogo: View {
             ZStack {
                 RoundedRectangle(cornerRadius: compact ? 16 : 28, style: .continuous)
                     .fill(PathloomPalette.card)
-                    .shadow(color: PathloomPalette.primary.opacity(0.18), radius: compact ? 8 : 16, y: 6)
+                    .shadow(color: PathloomPalette.arrow.opacity(0.16), radius: compact ? 8 : 16, y: 6)
                 PathloomMark()
                     .padding(compact ? 10 : 18)
             }
@@ -25,35 +25,32 @@ struct PathloomLogo: View {
 
 struct PathloomMark: View {
     var body: some View {
-        Canvas { context, size in
-            let inset = size.width * 0.16
-            let rect = CGRect(origin: .zero, size: size).insetBy(dx: inset, dy: inset)
-            let arrows: [(CGPoint, Angle, Color)] = [
-                (CGPoint(x: rect.midX, y: rect.minY + rect.height * 0.18), .degrees(0), PathloomPalette.primary),
-                (CGPoint(x: rect.maxX - rect.width * 0.18, y: rect.midY), .degrees(90), PathloomPalette.accent),
-                (CGPoint(x: rect.midX, y: rect.maxY - rect.height * 0.18), .degrees(180), PathloomPalette.secondary),
-                (CGPoint(x: rect.minX + rect.width * 0.18, y: rect.midY), .degrees(270), PathloomPalette.success)
-            ]
-            for (center, angle, color) in arrows {
-                var resolved = context
-                resolved.translateBy(x: center.x, y: center.y)
-                resolved.rotate(by: angle)
-                resolved.fill(chevron(size: rect.width * 0.28), with: .color(color))
+        ZStack {
+            ForEach(Array(dotPositions.enumerated()), id: \.offset) { _, point in
+                Circle()
+                    .fill(PathloomPalette.divider.opacity(0.7))
+                    .frame(width: 3, height: 3)
+                    .position(x: point.x, y: point.y)
             }
+            PuzzleArrowView(direction: .up, size: 18)
+                .offset(y: -22)
+            PuzzleArrowView(direction: .right, size: 18)
+                .offset(x: 22)
+            PuzzleArrowView(direction: .down, size: 18)
+                .offset(y: 22)
+            PuzzleArrowView(direction: .left, size: 18)
+                .offset(x: -22)
         }
+        .frame(width: 84, height: 84)
         .aspectRatio(1, contentMode: .fit)
     }
 
-    private func chevron(size: CGFloat) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: 0, y: -size * 0.7))
-        path.addLine(to: CGPoint(x: size * 0.62, y: size * 0.15))
-        path.addLine(to: CGPoint(x: size * 0.22, y: size * 0.15))
-        path.addLine(to: CGPoint(x: size * 0.22, y: size * 0.7))
-        path.addLine(to: CGPoint(x: -size * 0.22, y: size * 0.7))
-        path.addLine(to: CGPoint(x: -size * 0.22, y: size * 0.15))
-        path.addLine(to: CGPoint(x: -size * 0.62, y: size * 0.15))
-        path.closeSubpath()
-        return path
+    private var dotPositions: [CGPoint] {
+        let cells = [-1, 0, 1]
+        return cells.flatMap { row in
+            cells.map { column in
+                CGPoint(x: 42 + CGFloat(column) * 22, y: 42 + CGFloat(row) * 22)
+            }
+        }
     }
 }

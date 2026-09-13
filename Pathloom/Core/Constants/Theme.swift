@@ -12,14 +12,10 @@ enum PathloomPalette {
     static let mutedText = Color("MutedTextColor")
     static let card = Color("CardColor")
     static let divider = Color("DividerColor")
+    static let arrow = Color(red: 0.22, green: 0.47, blue: 0.73)
 
-    static func arrowFill(for direction: Direction) -> Color {
-        switch direction {
-        case .up: primary
-        case .right: accent
-        case .down: secondary
-        case .left: success
-        }
+    static func arrowFill(for _: Direction) -> Color {
+        arrow
     }
 }
 

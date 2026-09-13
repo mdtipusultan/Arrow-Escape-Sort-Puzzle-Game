@@ -21,32 +21,20 @@ final class BoardNode: SKNode {
         let rect = CGRect(x: -side / 2, y: -side / 2, width: side, height: side)
         let corner = side * AppConstants.Board.cornerRadiusFactor
 
-        let shadow = SKShapeNode(rect: rect.offsetBy(dx: 0, dy: -4), cornerRadius: corner)
-        shadow.fillColor = SKColor.black.withAlphaComponent(0.08)
-        shadow.strokeColor = .clear
-        shadow.zPosition = -1
-        addChild(shadow)
-
         let bg = SKShapeNode(rect: rect, cornerRadius: corner)
         bg.fillColor = BoardPalette.board
-        bg.strokeColor = BoardPalette.grid
-        bg.lineWidth = 1
+        bg.strokeColor = .clear
         addChild(bg)
 
+        let dotRadius = max(1.4, cellSize * 0.055)
         for row in 0..<gridSize {
             for column in 0..<gridSize {
-                let point = pointForCell(row: row, column: column)
-                let inset = cellSize * 0.08
-                let cellRect = CGRect(
-                    x: point.x - cellSize / 2 + inset,
-                    y: point.y - cellSize / 2 + inset,
-                    width: cellSize - inset * 2,
-                    height: cellSize - inset * 2
-                )
-                let cell = SKShapeNode(rect: cellRect, cornerRadius: cellSize * 0.18)
-                cell.fillColor = BoardPalette.grid.withAlphaComponent(0.35)
-                cell.strokeColor = .clear
-                addChild(cell)
+                let dot = SKShapeNode(circleOfRadius: dotRadius)
+                dot.fillColor = BoardPalette.dot
+                dot.strokeColor = .clear
+                dot.position = pointForCell(row: row, column: column)
+                dot.zPosition = 1
+                addChild(dot)
             }
         }
     }
@@ -84,5 +72,14 @@ final class BoardNode: SKNode {
         case .left: return CGPoint(x: start.x - travel, y: start.y)
         case .right: return CGPoint(x: start.x + travel, y: start.y)
         }
+    }
+
+    func pathPoints(from position: GridPosition, direction: Direction, gridSize: Int) -> [CGPoint] {
+        var points: [CGPoint] = []
+        for cell in PathCalculator.pathToEdge(from: position, direction: direction, gridSize: gridSize) {
+            points.append(pointForCell(row: cell.row, column: cell.column))
+        }
+        points.append(exitPoint(from: position, direction: direction))
+        return points
     }
 }

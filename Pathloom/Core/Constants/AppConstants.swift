@@ -9,8 +9,8 @@ enum AppConstants {
 
     enum Animation {
         static let blockedShake: TimeInterval = 0.18
-        static let moveMin: TimeInterval = 0.26
-        static let moveMax: TimeInterval = 0.52
+        static let moveMin: TimeInterval = 0.32
+        static let moveMax: TimeInterval = 0.72
         static let fadeExit: TimeInterval = 0.12
         static let completeHold: TimeInterval = 0.45
         static let springResponse: Double = 0.42

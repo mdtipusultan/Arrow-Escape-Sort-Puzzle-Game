@@ -2,29 +2,28 @@ import SpriteKit
 
 final class ArrowNode: SKNode {
     let arrowID: Int
-    private let shape: SKShapeNode
-    private let shadow: SKShapeNode
+    private let sprite: SKSpriteNode
+    private let hitTarget: SKShapeNode
+    private var cellSize: CGFloat
+    private var currentDirection: Direction
 
     init(arrow: Arrow, size: CGFloat) {
         arrowID = arrow.id
-        let path = ArrowNode.chevronPath(in: size)
-        shadow = SKShapeNode(path: path)
-        shape = SKShapeNode(path: path)
+        cellSize = size
+        currentDirection = arrow.direction
+        sprite = SKSpriteNode(texture: ArrowNode.texture(size: size))
+        hitTarget = SKShapeNode(rectOf: CGSize(width: size, height: size), cornerRadius: size * 0.12)
         super.init()
         name = "arrow-\(arrow.id)"
         isUserInteractionEnabled = false
 
-        shadow.fillColor = SKColor.black.withAlphaComponent(0.12)
-        shadow.strokeColor = .clear
-        shadow.position = CGPoint(x: 0, y: -size * 0.04)
-        addChild(shadow)
+        hitTarget.fillColor = .clear
+        hitTarget.strokeColor = .clear
+        addChild(hitTarget)
 
-        shape.fillColor = BoardPalette.fill(for: arrow.direction)
-        shape.strokeColor = SKColor.white.withAlphaComponent(0.35)
-        shape.lineWidth = max(1, size * 0.035)
-        addChild(shape)
-
-        zRotation = arrow.direction.rotationRadians
+        sprite.size = CGSize(width: size * 0.92, height: size * 0.92)
+        sprite.zRotation = ArrowGlyph.spriteRotation(for: arrow.direction)
+        addChild(sprite)
         setScale(1)
     }
 
@@ -34,36 +33,35 @@ final class ArrowNode: SKNode {
     }
 
     func updateFill(direction: Direction) {
-        shape.fillColor = BoardPalette.fill(for: direction)
-        zRotation = direction.rotationRadians
+        currentDirection = direction
+        sprite.zRotation = ArrowGlyph.spriteRotation(for: direction)
+    }
+
+    func makeTrailGhost() -> SKSpriteNode {
+        let ghost = SKSpriteNode(texture: sprite.texture)
+        ghost.size = sprite.size
+        ghost.zRotation = sprite.zRotation
+        ghost.alpha = 0.32
+        return ghost
     }
 
     func playBlocked() {
         removeAction(forKey: "blocked")
-        let dx = 5.0
+        let axis: CGVector
+        switch currentDirection {
+        case .left, .right: axis = CGVector(dx: 5, dy: 0)
+        case .up, .down: axis = CGVector(dx: 0, dy: 5)
+        }
         let sequence = SKAction.sequence([
-            SKAction.moveBy(x: -dx, y: 0, duration: 0.05),
-            SKAction.moveBy(x: dx * 2, y: 0, duration: 0.05),
-            SKAction.moveBy(x: -dx * 1.4, y: 0, duration: 0.05),
-            SKAction.moveBy(x: dx * 0.4, y: 0, duration: 0.03),
-            SKAction.scale(to: 1.04, duration: 0.04),
-            SKAction.scale(to: 1.0, duration: 0.08)
+            SKAction.moveBy(x: -axis.dx, y: -axis.dy, duration: 0.05),
+            SKAction.moveBy(x: axis.dx * 2, y: axis.dy * 2, duration: 0.05),
+            SKAction.moveBy(x: -axis.dx * 1.4, y: -axis.dy * 1.4, duration: 0.05),
+            SKAction.moveBy(x: axis.dx * 0.4, y: axis.dy * 0.4, duration: 0.03)
         ])
         run(sequence, withKey: "blocked")
     }
 
-    static func chevronPath(in size: CGFloat) -> CGPath {
-        let path = CGMutablePath()
-        let w = size * 0.62
-        let h = size * 0.68
-        path.move(to: CGPoint(x: 0, y: h * 0.48))
-        path.addLine(to: CGPoint(x: w * 0.42, y: -h * 0.18))
-        path.addLine(to: CGPoint(x: w * 0.16, y: -h * 0.18))
-        path.addLine(to: CGPoint(x: w * 0.16, y: -h * 0.48))
-        path.addLine(to: CGPoint(x: -w * 0.16, y: -h * 0.48))
-        path.addLine(to: CGPoint(x: -w * 0.16, y: -h * 0.18))
-        path.addLine(to: CGPoint(x: -w * 0.42, y: -h * 0.18))
-        path.closeSubpath()
-        return path
+    private static func texture(size: CGFloat) -> SKTexture {
+        SKTexture(image: ArrowGlyph.image(size: size, color: BoardPalette.arrow, style: .straight))
     }
 }
