@@ -113,6 +113,7 @@ final class GameViewModel {
         pendingAnimations = max(0, pendingAnimations - 1)
         if engine.isCleared {
             state = .completing
+            scene?.setInteractionLocked(false)
             scene?.celebrateClear()
             services.audio.play(.levelComplete)
             services.haptics.success()

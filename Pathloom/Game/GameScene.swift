@@ -33,6 +33,7 @@ final class GameScene: SKScene {
 
     func load(engine: GameEngine) {
         self.engine = engine
+        interactionLocked = false
         rebuild()
     }
 

@@ -40,6 +40,7 @@ struct GameBoardView: UIViewRepresentable {
         let needsReload = context.coordinator.boardEpoch != viewModel.boardEpoch
             || context.coordinator.levelID != viewModel.level.id
         if needsReload {
+            scene.setInteractionLocked(false)
             scene.load(engine: viewModel.engine)
             context.coordinator.boardEpoch = viewModel.boardEpoch
             context.coordinator.levelID = viewModel.level.id
