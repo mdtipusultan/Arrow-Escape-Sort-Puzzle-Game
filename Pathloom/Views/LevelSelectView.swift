@@ -52,8 +52,14 @@ struct LevelSelectView: View {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 14, weight: .semibold))
                 } else if completed {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 14, weight: .bold))
+                    let stars = progress.stars(for: id) ?? 1
+                    HStack(spacing: 1) {
+                        ForEach(1...3, id: \.self) { index in
+                            Image(systemName: index <= stars ? "star.fill" : "star")
+                                .font(.system(size: 8, weight: .bold))
+                        }
+                    }
+                    .foregroundStyle(PathloomPalette.secondary)
                 }
                 Text("\(id)")
                     .font(.system(.headline, design: .rounded).weight(.bold))
@@ -76,7 +82,10 @@ struct LevelSelectView: View {
 
     private func label(id: Int, unlocked: Bool, completed: Bool, current: Bool) -> String {
         if !unlocked { return "Level \(id), locked" }
-        if completed { return "Level \(id), completed" }
+        if completed {
+            let stars = services.progress.progress.stars(for: id) ?? 1
+            return "Level \(id), completed, \(stars) stars"
+        }
         if current { return "Level \(id), current" }
         return "Level \(id)"
     }

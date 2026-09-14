@@ -2,6 +2,8 @@ import SwiftUI
 
 struct LevelCompleteView: View {
     let moves: Int
+    let parMoves: Int
+    let stars: Int
     let best: Int?
     let hasNext: Bool
     var onNext: () -> Void
@@ -22,8 +24,17 @@ struct LevelCompleteView: View {
                     .font(.system(.largeTitle, design: .rounded).weight(.bold))
                     .foregroundStyle(PathloomPalette.text)
                     .minimumScaleFactor(0.8)
+                HStack(spacing: 6) {
+                    ForEach(1...3, id: \.self) { index in
+                        Image(systemName: index <= stars ? "star.fill" : "star")
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundStyle(index <= stars ? PathloomPalette.secondary : PathloomPalette.mutedText)
+                    }
+                }
+                .accessibilityLabel("\(stars) stars")
                 HStack(spacing: PathloomSpacing.xl) {
                     stat("Moves", "\(moves)")
+                    stat("Par", "\(parMoves)")
                     stat("Best", best.map(String.init) ?? "—")
                 }
                 if hasNext {

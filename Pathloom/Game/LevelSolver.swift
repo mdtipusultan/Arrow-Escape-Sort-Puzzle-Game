@@ -1,18 +1,45 @@
 import Foundation
 
+struct SolverReport: Sendable, Equatable {
+    var isSolvable: Bool
+    var solution: [Int]
+    var optimalMoves: Int
+    var solutionDepth: Int
+    var initialMoveCount: Int
+    var nodesExpanded: Int
+    var branchingAlongSolution: [Int]
+}
+
 enum LevelSolver {
     static func isSolvable(_ level: Level) -> Bool {
         solve(level: level) != nil
     }
 
     static func solve(level: Level) -> [Int]? {
-        let arrows = level.arrows.map { Arrow(from: $0) }
-        return solve(level: level, remaining: arrows)
+        solve(level: level, remaining: level.arrows.map { Arrow(from: $0) })
     }
 
     static func solve(level: Level, remaining: [Arrow]) -> [Int]? {
+        report(level: level, remaining: remaining)?.solution
+    }
+
+    static func report(level: Level) -> SolverReport? {
+        report(level: level, remaining: level.arrows.map { Arrow(from: $0) })
+    }
+
+    static func report(level: Level, remaining: [Arrow]) -> SolverReport? {
         let actives = remaining.filter(\.isActive)
-        if actives.isEmpty { return [] }
+        if actives.isEmpty {
+            return SolverReport(
+                isSolvable: true,
+                solution: [],
+                optimalMoves: 0,
+                solutionDepth: 0,
+                initialMoveCount: 0,
+                nodesExpanded: 0,
+                branchingAlongSolution: []
+            )
+        }
 
         var idToArrow: [Int: Arrow] = [:]
         for arrow in actives {
@@ -34,16 +61,24 @@ enum LevelSolver {
             return value
         }
 
+        struct Node {
+            var state: UInt64
+            var movedID: Int
+            var parent: Int
+        }
+
         let startMask = mask(for: ids)
         var visited: Set<UInt64> = [startMask]
-        var queue: [(UInt64, [Int])] = [(startMask, [])]
+        var nodes: [Node] = [Node(state: startMask, movedID: -1, parent: -1)]
         var head = 0
+        var goalIndex: Int?
 
-        while head < queue.count {
-            let (state, path) = queue[head]
-            head += 1
+        while head < nodes.count {
+            let current = nodes[head]
+            let state = current.state
             if state == 0 {
-                return path
+                goalIndex = head
+                break
             }
 
             let remainingIDs = ids.enumerated().compactMap { index, id in
@@ -51,6 +86,7 @@ enum LevelSolver {
             }
 
             var occupied: [GridPosition: Int] = [:]
+            occupied.reserveCapacity(remainingIDs.count)
             for id in remainingIDs {
                 if let arrow = idToArrow[id] {
                     occupied[arrow.position] = id
@@ -74,10 +110,65 @@ enum LevelSolver {
                 let next = state & ~(UInt64(1) << index)
                 if visited.contains(next) { continue }
                 visited.insert(next)
-                queue.append((next, path + [id]))
+                nodes.append(Node(state: next, movedID: id, parent: head))
             }
+            head += 1
         }
 
-        return nil
+        guard let goal = goalIndex ?? (nodes.last?.state == 0 ? nodes.count - 1 : nil) else {
+            return nil
+        }
+
+        var path: [Int] = []
+        var cursor = goal
+        while nodes[cursor].parent >= 0 {
+            path.append(nodes[cursor].movedID)
+            cursor = nodes[cursor].parent
+        }
+        path.reverse()
+
+        let startLevel = Level(
+            id: level.id,
+            gridSize: level.gridSize,
+            parMoves: level.parMoves,
+            difficulty: level.difficulty,
+            arrows: actives.map {
+                ArrowData(id: $0.id, row: $0.position.row, column: $0.position.column, direction: $0.direction)
+            },
+            seed: level.seed,
+            archetype: level.archetype
+        )
+        let edges = LevelGraph.blockingAdjacency(startLevel)
+        let depth = LevelGraph.longestChain(edges)
+        let initial = LevelGraph.initialMoveIDs(startLevel).count
+        let branching = branchingProfile(level: startLevel, solution: path)
+
+        return SolverReport(
+            isSolvable: true,
+            solution: path,
+            optimalMoves: path.count,
+            solutionDepth: depth,
+            initialMoveCount: initial,
+            nodesExpanded: visited.count,
+            branchingAlongSolution: branching
+        )
+    }
+
+    private static func branchingProfile(level: Level, solution: [Int]) -> [Int] {
+        var remaining = Dictionary(uniqueKeysWithValues: level.arrows.map { ($0.id, $0) })
+        var profile: [Int] = []
+        for move in solution {
+            let snapshot = Level(
+                id: level.id,
+                gridSize: level.gridSize,
+                parMoves: remaining.count,
+                difficulty: level.difficulty,
+                arrows: Array(remaining.values),
+                seed: level.seed
+            )
+            profile.append(LevelGraph.initialMoveIDs(snapshot).count)
+            remaining.removeValue(forKey: move)
+        }
+        return profile
     }
 }

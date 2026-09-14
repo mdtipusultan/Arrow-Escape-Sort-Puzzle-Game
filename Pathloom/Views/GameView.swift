@@ -58,6 +58,8 @@ struct GameView: View {
             if viewModel.state == .completed {
                 LevelCompleteView(
                     moves: viewModel.moveCount,
+                    parMoves: viewModel.level.parMoves,
+                    stars: viewModel.engine.starRating,
                     best: services.progress.progress.best(for: viewModel.level.id),
                     hasNext: viewModel.level.id < AppConstants.totalLevels,
                     onNext: { goNext() },
@@ -100,7 +102,7 @@ struct GameView: View {
 
     private func footer(_ viewModel: GameViewModel) -> some View {
         VStack(spacing: 12) {
-            Text("Moves \(viewModel.moveCount)")
+            Text("Moves \(viewModel.moveCount)  ·  Par \(viewModel.level.parMoves)")
                 .font(.system(.headline, design: .rounded))
                 .foregroundStyle(PathloomPalette.text)
                 .accessibilityLabel("Moves \(viewModel.moveCount), \(viewModel.remainingCount) remaining")

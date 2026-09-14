@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 enum Direction: String, Codable, CaseIterable, Sendable, Hashable {
     case up

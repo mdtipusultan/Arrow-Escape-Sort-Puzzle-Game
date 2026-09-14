@@ -120,7 +120,8 @@ final class GameViewModel {
             services.progress.recordCompletion(
                 levelID: level.id,
                 moves: moveCount,
-                totalLevels: AppConstants.totalLevels
+                totalLevels: AppConstants.totalLevels,
+                stars: engine.starRating
             )
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(AppConstants.Animation.completeHold))

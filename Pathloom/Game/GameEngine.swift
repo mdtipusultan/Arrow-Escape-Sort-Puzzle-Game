@@ -9,6 +9,8 @@ struct GameEngine: Equatable, Sendable {
     private(set) var level: Level
     private(set) var arrows: [Int: Arrow]
     private(set) var moveCount: Int
+    private(set) var wastedTaps: Int
+    private(set) var undoCount: Int
     private var undoStack: [GameSnapshot]
 
     var remainingArrows: [Arrow] {
@@ -27,6 +29,8 @@ struct GameEngine: Equatable, Sendable {
         }
         arrows = mapped
         moveCount = 0
+        wastedTaps = 0
+        undoCount = 0
         undoStack = []
     }
 
@@ -81,7 +85,10 @@ struct GameEngine: Equatable, Sendable {
 
     mutating func attemptEscape(_ arrowID: Int) -> EscapeOutcome {
         guard let arrow = arrows[arrowID], arrow.isActive else { return .blocked }
-        guard canEscape(arrowID) else { return .blocked }
+        guard canEscape(arrowID) else {
+            wastedTaps += 1
+            return .blocked
+        }
 
         undoStack.append(GameSnapshot(arrows: arrows, moveCount: moveCount))
         arrows[arrowID]?.isActive = false
@@ -103,10 +110,15 @@ struct GameEngine: Equatable, Sendable {
         guard let snapshot = undoStack.popLast() else { return false }
         arrows = snapshot.arrows
         moveCount = snapshot.moveCount
+        undoCount += 1
         return true
     }
 
     var canUndo: Bool { !undoStack.isEmpty }
+
+    var starRating: Int {
+        StarRating.stars(parMoves: level.parMoves, wastedTaps: wastedTaps, undoCount: undoCount)
+    }
 
     private func snapshotAsLevel() -> Level {
         let active = remainingArrows.map {
@@ -118,7 +130,10 @@ struct GameEngine: Equatable, Sendable {
             parMoves: level.parMoves,
             difficulty: level.difficulty,
             arrows: active,
-            seed: level.seed
+            seed: level.seed,
+            archetype: level.archetype,
+            difficultyScore: level.difficultyScore,
+            solutionDepth: level.solutionDepth
         )
     }
 }

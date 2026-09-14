@@ -26,6 +26,9 @@ struct DeveloperMenuView: View {
                 Button("Reset progress") {
                     services.progress.reset()
                 }
+                NavigationLink("Level Analyzer") {
+                    LevelAnalyzerView(level: viewModel.level)
+                }
             }
             Section("Board") {
                 Toggle("Show coordinates", isOn: Binding(
@@ -45,28 +48,19 @@ struct DeveloperMenuView: View {
             }
             Section("Validation") {
                 Button("Validate all levels") {
-                    validation = validateAll()
+                    validation = LevelValidator.report(for: services.catalog.levels)
                 }
                 if !validation.isEmpty {
-                    Text(validation)
-                        .font(.footnote.monospaced())
+                    ScrollView {
+                        Text(validation)
+                            .font(.footnote.monospaced())
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: 320)
                 }
             }
         }
         .navigationTitle("Developer")
-    }
-
-    private func validateAll() -> String {
-        var failures: [Int] = []
-        for level in services.catalog.levels {
-            if LevelSolver.solve(level: level) == nil {
-                failures.append(level.id)
-            }
-        }
-        if failures.isEmpty {
-            return "All \(services.catalog.levels.count) levels solvable."
-        }
-        return "Unsolvable: \(failures.map(String.init).joined(separator: ", "))"
     }
 }
 #endif
