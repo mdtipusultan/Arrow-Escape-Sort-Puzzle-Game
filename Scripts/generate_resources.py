@@ -38,7 +38,7 @@ def can_escape(arrow, occupied, size):
     return path_clear(arrow["row"], arrow["column"], arrow["direction"], size, occupied)
 
 
-def solve(level):
+def solve(level, node_limit=80000):
     arrows = {a["id"]: a for a in level["arrows"]}
     ids = sorted(arrows)
     index = {i: n for n, i in enumerate(ids)}
@@ -46,6 +46,8 @@ def solve(level):
     seen = {start}
     q = deque([(start, [])])
     while q:
+        if len(seen) > node_limit:
+            return None
         state, path = q.popleft()
         if state == 0:
             return path
@@ -64,82 +66,370 @@ def solve(level):
 
 
 def spec(level_id: int):
+    """Steep curve: early teaching boards, late boards dense with long lock chains."""
     if level_id == 1:
         return 3, 1, "tutorial"
-    if level_id <= 10:
-        size = 3 if level_id <= 5 else 4
-        count = min(2 + (level_id // 2), size * size - 1)
-        return size, count, "easy"
-    if level_id <= 25:
-        size = 4 if level_id <= 18 else 5
-        count = min(4 + (level_id - 10) // 2, size * size - 2)
-        return size, count, "easy" if level_id <= 18 else "medium"
-    if level_id <= 50:
-        size = 5 if level_id <= 38 else 6
-        count = min(7 + (level_id - 25) // 3, size * size - 3)
-        return size, count, "medium"
-    if level_id <= 75:
-        size = 6
-        count = min(10 + (level_id - 51) // 3, 20)
-        return size, count, "hard"
-    size = 6 if level_id <= 90 else 7
-    count = min(14 + (level_id - 76) // 2, size * size - 4)
-    return size, min(count, 22), "expert"
+    if level_id <= 8:
+        return 3, min(2 + (level_id - 1), 5), "easy"
+    if level_id <= 16:
+        return 4, 6 + (level_id - 9), "easy"
+    if level_id <= 28:
+        return 5, 10 + (level_id - 17) // 2, "medium"
+    if level_id <= 45:
+        return 6, 14 + (level_id - 29) // 2, "medium"
+    if level_id <= 65:
+        return 6, 18 + (level_id - 46) // 3, "hard"
+    if level_id <= 82:
+        return 7, 20 + (level_id - 66) // 3, "hard"
+    size = 7 if level_id <= 92 else 8
+    count = 22 + (level_id - 83) // 2
+    cap = size * size - 6
+    return size, min(count, cap, 24), "expert"
 
 
-def generate_level(level_id: int):
-    size, count, difficulty = spec(level_id)
-    seed = 17000 + level_id * 97
-    rng = random.Random(seed)
-    for attempt in range(80):
-        occupied = {}
-        arrows = []
-        cells = [(r, c) for r in range(size) for c in range(size)]
-        dirs = list(DIRS)
-        for n in range(1, count + 1):
-            rng.shuffle(cells)
-            rng.shuffle(dirs)
-            placed = False
-            # Prefer blocking an existing arrow on later levels.
-            preferred = []
-            if arrows and rng.random() < min(0.25 + level_id / 140.0, 0.82):
-                victim = rng.choice(arrows)
-                dr, dc = DIRS[victim["direction"]]
-                r, c = victim["row"] + dr, victim["column"] + dc
-                while 0 <= r < size and 0 <= c < size:
-                    if (r, c) not in occupied:
-                        preferred.append((r, c))
-                    r += dr
-                    c += dc
-            order = preferred + [c for c in cells if c not in preferred]
-            for r, c in order:
-                if (r, c) in occupied:
-                    continue
-                local_dirs = dirs[:]
-                rng.shuffle(local_dirs)
-                for d in local_dirs:
-                    if path_clear(r, c, d, size, occupied):
-                        occupied[(r, c)] = n
-                        arrows.append({"id": n, "row": r, "column": c, "direction": d})
-                        placed = True
-                        break
-                if placed:
-                    break
-            if not placed:
+def count_free(arrows, size):
+    occupied = {(a["row"], a["column"]) for a in arrows}
+    return sum(1 for a in arrows if can_escape(a, occupied, size))
+
+
+def longest_lock_chain(arrows, size):
+    by_cell = {(a["row"], a["column"]): a["id"] for a in arrows}
+    depends = {a["id"]: [] for a in arrows}
+    for a in arrows:
+        dr, dc = DIRS[a["direction"]]
+        r, c = a["row"] + dr, a["column"] + dc
+        while 0 <= r < size and 0 <= c < size:
+            blocker = by_cell.get((r, c))
+            if blocker is not None:
+                depends[a["id"]].append(blocker)
                 break
-        if len(arrows) != count:
-            continue
+            r += dr
+            c += dc
+    memo = {}
+    visiting = set()
+
+    def depth(i):
+        if i in memo:
+            return memo[i]
+        if i in visiting:
+            return 1
+        visiting.add(i)
+        kids = depends[i]
+        memo[i] = 1 + (max((depth(k) for k in kids), default=0) if kids else 0)
+        visiting.remove(i)
+        return memo[i]
+
+    return max((depth(a["id"]) for a in arrows), default=1)
+
+
+def playthrough_branching(level):
+    arrows = {a["id"]: a for a in level["arrows"]}
+    remaining = set(arrows)
+    frees = []
+    size = level["gridSize"]
+    while remaining:
+        occupied = {(arrows[i]["row"], arrows[i]["column"]) for i in remaining}
+        open_ids = [i for i in remaining if can_escape(arrows[i], occupied, size)]
+        if not open_ids:
+            break
+        frees.append(len(open_ids))
+        remaining.remove(min(open_ids))
+    if not frees:
+        return 99.0, 99
+    return sum(frees) / len(frees), min(frees)
+
+
+def difficulty_score(level):
+    arrows = level["arrows"]
+    n = len(arrows)
+    size = level["gridSize"]
+    free0 = count_free(arrows, size)
+    chain = longest_lock_chain(arrows, size)
+    avg_free, min_free = playthrough_branching(level)
+    blocked = n - free0
+    return (
+        blocked * 14
+        + chain * 18
+        + n * 3
+        + size * 2
+        - free0 * 22
+        - avg_free * 10
+        - min_free * 8
+    )
+
+
+def rotate_dir(direction, turns):
+    order = ["up", "right", "down", "left"]
+    return order[(order.index(direction) + turns) % 4]
+
+
+def transform_level(level, turns, flip):
+    size = level["gridSize"]
+    arrows = []
+    for a in level["arrows"]:
+        r, c = a["row"], a["column"]
+        if flip:
+            c = size - 1 - c
+            d = {"left": "right", "right": "left", "up": "up", "down": "down"}[a["direction"]]
+        else:
+            d = a["direction"]
+        for _ in range(turns):
+            r, c = c, size - 1 - r
+            d = rotate_dir(d, 1)
+        arrows.append({"id": a["id"], "row": r, "column": c, "direction": d})
+    out = dict(level)
+    out["arrows"] = arrows
+    return out
+
+
+def layout_key(level):
+    return tuple(sorted((a["row"], a["column"], a["direction"]) for a in level["arrows"]))
+
+
+def reverse_construct(size, count, rng, tightness):
+    occupied = {}
+    arrows = []
+
+    def try_place(row, col, direction):
+        if (row, col) in occupied:
+            return False
+        if not path_clear(row, col, direction, size, occupied):
+            return False
+        nid = len(arrows) + 1
+        occupied[(row, col)] = nid
+        arrows.append({"id": nid, "row": row, "column": col, "direction": direction})
+        return True
+
+    first_cells = [(r, c) for r in range(size) for c in range(size)]
+    rng.shuffle(first_cells)
+    placed_first = False
+    for r, c in first_cells:
+        dirs = list(DIRS)
+        rng.shuffle(dirs)
+        for d in dirs:
+            if try_place(r, c, d):
+                placed_first = True
+                break
+        if placed_first:
+            break
+    if not placed_first:
+        return None
+
+    empty = {(r, c) for r in range(size) for c in range(size)} - set(occupied)
+    for _ in range(1, count):
+        free_now = [a for a in arrows if can_escape(a, occupied, size)]
+        block_hits = {}
+        for victim in free_now:
+            dr, dc = DIRS[victim["direction"]]
+            r, c = victim["row"] + dr, victim["column"] + dc
+            while 0 <= r < size and 0 <= c < size:
+                if (r, c) not in occupied:
+                    block_hits[(r, c)] = block_hits.get((r, c), 0) + 1
+                r += dr
+                c += dc
+
+        candidates = list(block_hits)
+        extras = list(empty)
+        rng.shuffle(extras)
+        candidates.extend(extras[: max(6, size)])
+
+        scored = []
+        dirs = list(DIRS)
+        for r, c in candidates:
+            if (r, c) in occupied:
+                continue
+            rng.shuffle(dirs)
+            for d in dirs:
+                if not path_clear(r, c, d, size, occupied):
+                    continue
+                interior = min(r, c, size - 1 - r, size - 1 - c)
+                score = block_hits.get((r, c), 0) * 14 + interior * 2
+                scored.append((score, r, c, d))
+        if not scored:
+            return None
+        scored.sort(key=lambda x: x[0], reverse=True)
+        window = max(1, int(len(scored) * max(0.06, 1.0 - tightness)))
+        pick = scored[rng.randrange(window)]
+        if not try_place(pick[1], pick[2], pick[3]):
+            return None
+        empty.discard((pick[1], pick[2]))
+    if len(arrows) != count:
+        return None
+    return arrows
+
+
+def jam_pattern(size, count, rng):
+    """Fill lanes that all wait on a single crossing key."""
+    occupied = {}
+    arrows = []
+    nid = 1
+
+    def add(r, c, d):
+        nonlocal nid
+        if not (0 <= r < size and 0 <= c < size) or (r, c) in occupied:
+            return False
+        occupied[(r, c)] = nid
+        arrows.append({"id": nid, "row": r, "column": c, "direction": d})
+        nid += 1
+        return True
+
+    # Place the last-to-leave traffic first in reverse? We still need solvability.
+    # Build reverse: key on the edge, then a crossing column, then a jammed row.
+    key_col = rng.randint(1, size - 2)
+    add(size - 1, key_col, "down")
+    for r in range(size - 2, -1, -1):
+        if nid > count:
+            break
+        add(r, key_col, rng.choice(["down", "left", "right"] if r > 0 else ["down"]))
+        if not path_clear(arrows[-1]["row"], arrows[-1]["column"], arrows[-1]["direction"], size, occupied):
+            arrows.pop()
+            occupied.pop((r, key_col), None)
+            nid -= 1
+            add(r, key_col, "down")
+    rows = list(range(size - 1))
+    rng.shuffle(rows)
+    for r in rows:
+        if nid > count:
+            break
+        for c in range(size):
+            if nid > count:
+                break
+            if (r, c) in occupied:
+                continue
+            d = "right" if c < key_col else "left"
+            if c == key_col:
+                continue
+            if path_clear(r, c, d, size, occupied) or True:
+                # may not be clear; only add if currently clear so reverse-order holds
+                if path_clear(r, c, d, size, occupied):
+                    add(r, c, d)
+    if len(arrows) < count:
+        cells = [(r, c) for r in range(size) for c in range(size) if (r, c) not in occupied]
+        rng.shuffle(cells)
+        for r, c in cells:
+            if len(arrows) >= count:
+                break
+            dirs = list(DIRS)
+            rng.shuffle(dirs)
+            for d in dirs:
+                if path_clear(r, c, d, size, occupied):
+                    add(r, c, d)
+                    break
+    return arrows if len(arrows) == count else None
+
+
+def handmade(level_id: int):
+    if level_id == 1:
+        return 3, "tutorial", [{"id": 1, "row": 1, "column": 0, "direction": "right"}]
+    if level_id == 2:
+        return 3, "easy", [
+            {"id": 1, "row": 1, "column": 0, "direction": "right"},
+            {"id": 2, "row": 1, "column": 2, "direction": "up"},
+        ]
+    if level_id == 3:
+        return 3, "easy", [
+            {"id": 1, "row": 2, "column": 0, "direction": "right"},
+            {"id": 2, "row": 2, "column": 2, "direction": "up"},
+            {"id": 3, "row": 0, "column": 2, "direction": "left"},
+        ]
+    if level_id == 4:
+        return 3, "easy", [
+            {"id": 1, "row": 1, "column": 0, "direction": "right"},
+            {"id": 2, "row": 1, "column": 1, "direction": "right"},
+            {"id": 3, "row": 1, "column": 2, "direction": "up"},
+            {"id": 4, "row": 0, "column": 2, "direction": "left"},
+        ]
+    if level_id == 5:
+        return 3, "easy", [
+            {"id": 1, "row": 0, "column": 1, "direction": "down"},
+            {"id": 2, "row": 1, "column": 0, "direction": "right"},
+            {"id": 3, "row": 1, "column": 2, "direction": "down"},
+            {"id": 4, "row": 2, "column": 1, "direction": "left"},
+            {"id": 5, "row": 1, "column": 1, "direction": "down"},
+        ]
+    return None
+
+
+def generate_level(level_id: int, seen: set):
+    hand = handmade(level_id)
+    if hand:
+        size, difficulty, arrows = hand
         level = {
             "id": level_id,
             "gridSize": size,
-            "parMoves": count,
+            "parMoves": len(arrows),
+            "difficulty": difficulty,
+            "seed": 9000 + level_id,
+            "arrows": arrows,
+        }
+        if not solve(level):
+            raise RuntimeError(f"Handmade level {level_id} is unsolvable")
+        seen.add(layout_key(level))
+        return level
+
+    size, count, difficulty = spec(level_id)
+    seed = 41000 + level_id * 131
+    rng = random.Random(seed)
+    tightness = min(0.96, 0.48 + level_id / 105.0)
+    attempts = 18 if level_id <= 16 else 28 if level_id <= 50 else 36
+    best = None
+    best_score = -10**9
+    for attempt in range(attempts):
+        if level_id > 20 and attempt % 5 == 0:
+            arrows = jam_pattern(size, count, random.Random(seed + attempt * 17 + 3))
+        else:
+            arrows = reverse_construct(size, count, random.Random(seed + attempt * 19), tightness)
+        if not arrows:
+            continue
+        if count_free(arrows, size) > (3 if level_id > 16 else 5):
+            continue
+        base = {
+            "id": level_id,
+            "gridSize": size,
+            "parMoves": len(arrows),
             "difficulty": difficulty,
             "seed": seed + attempt,
             "arrows": arrows,
         }
-        if solve(level):
-            return level
-    raise RuntimeError(f"Failed to generate level {level_id}")
+        variant = transform_level(base, attempt % 4, attempt % 2 == 1)
+        if layout_key(variant) in seen:
+            continue
+        if solve(variant) is None:
+            continue
+        free0 = count_free(variant["arrows"], size)
+        chain = longest_lock_chain(variant["arrows"], size)
+        if level_id > 12 and free0 > max(2, 4 - level_id // 30):
+            continue
+        if level_id > 40 and chain < 5:
+            continue
+        if level_id > 70 and chain < 7:
+            continue
+        score = difficulty_score(variant)
+        if score > best_score:
+            best_score = score
+            best = variant
+    if best is None:
+        for attempt in range(80):
+            arrows = reverse_construct(size, max(count - attempt // 20, 6), random.Random(seed + 9000 + attempt), 0.75)
+            if not arrows:
+                continue
+            if count_free(arrows, size) > 4:
+                continue
+            level = {
+                "id": level_id,
+                "gridSize": size,
+                "parMoves": len(arrows),
+                "difficulty": difficulty,
+                "seed": seed + 9000 + attempt,
+                "arrows": arrows,
+            }
+            if solve(level):
+                best = level
+                break
+    if best is None:
+        raise RuntimeError(f"Failed to generate level {level_id}")
+    seen.add(layout_key(best))
+    return best
 
 
 def write_wav(path: Path, samples, sr=44100):
@@ -300,17 +590,42 @@ def make_assets():
 
 
 def make_levels():
-    levels = [generate_level(i) for i in range(1, 101)]
+    seen = set()
+    levels = []
+    for i in range(1, 101):
+        lv = generate_level(i, seen)
+        levels.append(lv)
+        print(
+            f"L{i:03d} {lv['gridSize']}x{lv['gridSize']} arrows={len(lv['arrows']):2d} "
+            f"free={count_free(lv['arrows'], lv['gridSize'])} "
+            f"chain={longest_lock_chain(lv['arrows'], lv['gridSize'])} {lv['difficulty']}",
+            flush=True,
+        )
     LEVELS.parent.mkdir(parents=True, exist_ok=True)
     LEVELS.write_text(json.dumps({"levels": levels}, indent=2))
     unsolved = [lv["id"] for lv in levels if solve(lv) is None]
     if unsolved:
         raise SystemExit(f"Unsolvable levels: {unsolved}")
+    samples = [1, 10, 25, 50, 75, 100]
     print(f"Wrote {len(levels)} solvable levels")
+    for i in samples:
+        lv = levels[i - 1]
+        free0 = count_free(lv["arrows"], lv["gridSize"])
+        chain = longest_lock_chain(lv["arrows"], lv["gridSize"])
+        avg_free, _ = playthrough_branching(lv)
+        print(
+            f"  L{i:3d}  {lv['gridSize']}x{lv['gridSize']}  arrows={len(lv['arrows']):2d}  "
+            f"free={free0}  chain={chain}  avgFree={avg_free:.1f}  {lv['difficulty']}"
+        )
 
 
 if __name__ == "__main__":
-    make_assets()
-    make_sounds()
-    make_levels()
-    print("Resources generated")
+    import sys
+
+    if "--levels" in sys.argv:
+        make_levels()
+    else:
+        make_assets()
+        make_sounds()
+        make_levels()
+        print("Resources generated")
