@@ -3,52 +3,27 @@ import SwiftUI
 struct HomeView: View {
     @Environment(AppServices.self) private var services
     @State private var path: [HomeRoute] = []
+    @State private var appeared = false
 
     var body: some View {
         NavigationStack(path: $path) {
+            let _ = services.progress.progress
             let model = HomeViewModel(services: services)
             ScrollView {
-                VStack(alignment: .leading, spacing: PathloomSpacing.lg) {
-                    HStack(alignment: .center) {
-                        PathloomLogo(compact: true)
-                        Spacer()
-                        Button {
-                            services.audio.play(.buttonTap)
-                            path.append(.settings)
-                        } label: {
-                            Image(systemName: "slider.horizontal.3")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(PathloomPalette.primary)
-                                .frame(width: AppConstants.minimumTouchTarget, height: AppConstants.minimumTouchTarget)
-                                .background(PathloomPalette.card, in: Circle())
-                        }
-                        .accessibilityLabel("Settings")
-                    }
-
-                    Text("Weave a path off the board.")
-                        .font(.system(.title3, design: .rounded).weight(.medium))
-                        .foregroundStyle(PathloomPalette.mutedText)
-
-                    VStack(spacing: PathloomSpacing.md) {
-                        PathloomButton(title: "Play", systemImage: "play.fill") {
-                            path.append(.levels)
-                        }
-                        PathloomButton(
-                            title: "Continue Level \(model.continueID)",
-                            systemImage: "arrow.forward.circle.fill",
-                            prominent: false
-                        ) {
-                            path.append(.game(model.continueID))
-                        }
-                    }
-
-                    progressCard(model)
-                    dailyCard(model)
+                ViewThatFits(in: .vertical) {
+                    homeStack(model, compact: false)
+                    homeStack(model, compact: true)
                 }
-                .padding(PathloomSpacing.lg)
+                .frame(maxWidth: 560)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, PathloomSpacing.lg)
+                .padding(.bottom, PathloomSpacing.lg)
             }
+            .scrollBounceBehavior(.basedOnSize)
             .background(PathloomPalette.background.ignoresSafeArea())
+            .safeAreaPadding(.top, PathloomSpacing.sm)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
                 case .levels:
@@ -61,43 +36,109 @@ struct HomeView: View {
                     GameView(level: services.level(id: id))
                 }
             }
+            .onAppear {
+                withAnimation(.spring(response: 0.55, dampingFraction: 0.86)) {
+                    appeared = true
+                }
+            }
         }
     }
 
-    private func progressCard(_ model: HomeViewModel) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Progress")
-                .font(.system(.headline, design: .rounded))
-            Text("\(model.completedCount) / \(model.totalCount) completed")
-                .font(.system(.body, design: .rounded))
-                .foregroundStyle(PathloomPalette.mutedText)
-            ProgressView(value: Double(model.completedCount), total: Double(max(model.totalCount, 1)))
-                .tint(PathloomPalette.primary)
-            if model.streak > 0 {
-                Text("Streak \(model.streak)")
-                    .font(.system(.footnote, design: .rounded).weight(.medium))
-                    .foregroundStyle(PathloomPalette.secondary)
+    private func homeStack(_ model: HomeViewModel, compact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: compact ? PathloomSpacing.md : PathloomSpacing.lg) {
+            HomeHeaderView(
+                completedCount: model.completedCount,
+                totalLevels: model.totalLevels,
+                onSettings: { path.append(.settings) }
+            )
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : -10)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(model.headline)
+                    .font(.system(compact ? .title3 : .title2, design: .rounded).weight(.semibold))
+                    .foregroundStyle(PathloomPalette.text)
+                    .minimumScaleFactor(0.8)
+                Text(model.subheadline)
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(PathloomPalette.mutedText)
+                    .minimumScaleFactor(0.85)
             }
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 8)
+
+            HomePlayCard(model: model) {
+                path.append(.game(model.continueID))
+            }
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 16)
+
+            PathloomButton(title: "Levels", systemImage: "square.grid.2x2.fill", prominent: false) {
+                path.append(.levels)
+            }
+            .accessibilityHint("Browse and choose a level")
+            .opacity(appeared ? 1 : 0)
+
+            statsRow(model)
+            dailyCard(model)
         }
-        .padding(PathloomSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func statsRow(_ model: HomeViewModel) -> some View {
+        HStack(spacing: PathloomSpacing.sm) {
+            statTile(title: "Cleared", value: "\(model.completedCount)")
+            statTile(title: "Unlocked", value: "\(model.unlockedCount)")
+            statTile(title: "Streak", value: "\(model.streak)")
+        }
+        .opacity(appeared ? 1 : 0)
+    }
+
+    private func statTile(title: String, value: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(.title3, design: .rounded).weight(.bold))
+                .foregroundStyle(PathloomPalette.text)
+                .monospacedDigit()
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+            Text(title)
+                .font(.system(.caption, design: .rounded).weight(.medium))
+                .foregroundStyle(PathloomPalette.mutedText)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, PathloomSpacing.md)
         .background(PathloomPalette.card, in: RoundedRectangle(cornerRadius: PathloomRadius.large, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 
     private func dailyCard(_ model: HomeViewModel) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(model.dailyTitle)
-                .font(.system(.headline, design: .rounded))
+            HStack {
+                Text(model.dailyTitle)
+                    .font(.system(.headline, design: .rounded))
+                Spacer()
+                if model.isDailyCompleteToday {
+                    Text("Done")
+                        .font(.system(.caption, design: .rounded).weight(.semibold))
+                        .foregroundStyle(PathloomPalette.success)
+                }
+            }
             Text("A rotating puzzle from the full collection.")
                 .font(.system(.subheadline, design: .rounded))
                 .foregroundStyle(PathloomPalette.mutedText)
-            PathloomButton(title: "Play Daily", systemImage: "sun.max.fill", prominent: false) {
+            PathloomButton(
+                title: model.isDailyCompleteToday ? "Play Again" : "Play Daily",
+                systemImage: "sun.max.fill",
+                prominent: false
+            ) {
                 path.append(.game(model.dailyLevel.id))
             }
+            .accessibilityLabel("Play daily challenge, level \(model.dailyLevel.id)")
         }
         .padding(PathloomSpacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(PathloomPalette.card, in: RoundedRectangle(cornerRadius: PathloomRadius.large, style: .continuous))
+        .opacity(appeared ? 1 : 0)
     }
 }
 

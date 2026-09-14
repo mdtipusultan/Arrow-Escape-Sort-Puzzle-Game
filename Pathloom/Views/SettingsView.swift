@@ -31,6 +31,7 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
+        .toolbar(.visible, for: .navigationBar)
         .confirmationDialog("Reset all progress?", isPresented: $confirmReset, titleVisibility: .visible) {
             Button("Reset Progress", role: .destructive) {
                 services.progress.reset()

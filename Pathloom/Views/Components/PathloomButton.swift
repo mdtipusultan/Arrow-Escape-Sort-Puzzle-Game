@@ -34,7 +34,16 @@ struct PathloomButton: View {
                     .stroke(PathloomPalette.primary.opacity(prominent ? 0 : 0.25), lineWidth: 1)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(ScalePressButtonStyle())
         .accessibilityAddTraits(.isButton)
+    }
+}
+
+struct ScalePressButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .opacity(configuration.isPressed ? 0.92 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.72), value: configuration.isPressed)
     }
 }

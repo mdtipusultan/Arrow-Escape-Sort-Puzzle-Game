@@ -27,6 +27,7 @@ struct LevelSelectView: View {
         .background(PathloomPalette.background.ignoresSafeArea())
         .navigationTitle("Levels")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar(.visible, for: .navigationBar)
     }
 
     private var sectionRanges: [Range<Int>] {

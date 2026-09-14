@@ -58,4 +58,8 @@ struct LevelLoader: LevelLoading {
             seed: 1
         )
     }
+
+    static func totalLevels(in catalog: LevelCatalog) -> Int {
+        max(catalog.levels.count, 1)
+    }
 }

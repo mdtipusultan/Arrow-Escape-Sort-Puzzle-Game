@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 struct PlayerProgress: Codable, Equatable, Sendable {
     var highestUnlockedLevel: Int
@@ -78,6 +79,8 @@ protocol ProgressStoring: AnyObject {
     func reset()
 }
 
+@MainActor
+@Observable
 final class ProgressManager: ProgressStoring {
     private let defaults: UserDefaults
     private let key = "pathloom.progress.v1"
