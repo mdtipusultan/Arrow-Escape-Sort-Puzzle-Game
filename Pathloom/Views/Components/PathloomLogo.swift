@@ -6,8 +6,8 @@ struct PathloomLogo: View {
 
     var body: some View {
         if header {
-            HStack(spacing: 10) {
-                mark(size: 44)
+            HStack(spacing: 8) {
+                mark(size: 28)
                 Text(AppConstants.gameName)
                     .font(.system(.title2, design: .rounded).weight(.bold))
                     .foregroundStyle(PathloomPalette.text)
@@ -35,15 +35,31 @@ struct PathloomLogo: View {
                 .fill(PathloomPalette.card)
                 .shadow(color: PathloomPalette.arrow.opacity(0.16), radius: size * 0.12, y: size * 0.08)
             PathloomMark()
-                .padding(size * 0.14)
+                .padding(size * 0.12)
         }
         .frame(width: size, height: size)
+        .clipped()
         .accessibilityHidden(true)
     }
 }
 
 struct PathloomMark: View {
+    private let designSize: CGFloat = 84
+
     var body: some View {
+        GeometryReader { geo in
+            let side = min(geo.size.width, geo.size.height)
+            let scale = side / designSize
+            markContent
+                .frame(width: designSize, height: designSize)
+                .scaleEffect(scale)
+                .frame(width: side, height: side)
+                .position(x: geo.size.width / 2, y: geo.size.height / 2)
+        }
+        .aspectRatio(1, contentMode: .fit)
+    }
+
+    private var markContent: some View {
         ZStack {
             ForEach(Array(dotPositions.enumerated()), id: \.offset) { _, point in
                 Circle()
@@ -60,8 +76,6 @@ struct PathloomMark: View {
             PuzzleArrowView(direction: .left, size: 18)
                 .offset(x: -22)
         }
-        .frame(width: 84, height: 84)
-        .aspectRatio(1, contentMode: .fit)
     }
 
     private var dotPositions: [CGPoint] {
