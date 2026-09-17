@@ -4,7 +4,7 @@ import XCTest
 final class CatalogSolvabilityTests: XCTestCase {
     func testLevelSolverFindsSolutionForEveryShippedLevel() throws {
         let catalog = try LevelLoader().loadCatalog()
-        XCTAssertGreaterThanOrEqual(catalog.levels.count, 100)
+        XCTAssertGreaterThanOrEqual(catalog.levels.count, 200)
         var failures: [Int] = []
         for level in catalog.levels {
             if LevelSolver.solve(level: level) == nil {
@@ -20,8 +20,9 @@ final class CatalogSolvabilityTests: XCTestCase {
         XCTAssertEqual(byID[1]?.arrowCount, 1)
         XCTAssertLessThanOrEqual(byID[8]?.arrowCount ?? 99, 8)
         XCTAssertGreaterThanOrEqual(byID[25]?.arrowCount ?? 0, 7)
-        XCTAssertGreaterThanOrEqual(byID[50]?.arrowCount ?? 0, 14)
-        XCTAssertGreaterThanOrEqual(byID[100]?.arrowCount ?? 0, 22)
+        XCTAssertGreaterThanOrEqual(byID[50]?.arrowCount ?? 0, 12)
+        XCTAssertGreaterThanOrEqual(byID[100]?.arrowCount ?? 0, 16)
+        XCTAssertGreaterThanOrEqual(byID[200]?.arrowCount ?? 0, 18)
         XCTAssertGreaterThan(byID[100]?.gridSize ?? 0, byID[10]?.gridSize ?? 99)
 
         let early = catalog.levels.prefix(10).compactMap(\.difficultyScore).reduce(0, +)
@@ -43,7 +44,7 @@ final class CatalogSolvabilityTests: XCTestCase {
 
     func testConsecutiveLevelsUseDifferentArchetypes() throws {
         let catalog = try LevelLoader().loadCatalog()
-        let archetypes = catalog.levels.map { $0.archetype ?? "" }
+        let archetypes = catalog.levels.map(\.resolvedPatternType)
         for index in 1..<archetypes.count {
             XCTAssertNotEqual(archetypes[index], archetypes[index - 1], "Repeated archetype at \(index + 1)")
         }

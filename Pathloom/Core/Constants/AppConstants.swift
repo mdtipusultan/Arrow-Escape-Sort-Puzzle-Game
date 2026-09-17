@@ -3,7 +3,7 @@ import Foundation
 enum AppConstants {
     static let gameName = "Pathloom"
     static let tagline = "Think ahead. Clear the way."
-    static let totalLevels = 100
+    static let totalLevels = 200
     static let splashDuration: TimeInterval = 1.35
     static let minimumTouchTarget: CGFloat = 44
 

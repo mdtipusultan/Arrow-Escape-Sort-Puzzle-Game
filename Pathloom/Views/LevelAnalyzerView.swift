@@ -9,7 +9,9 @@ struct LevelAnalyzerView: View {
         Form {
             Section("Overview") {
                 row("Pattern", displayName(analysis.pattern))
+                row("Family", PuzzlePattern(rawValue: analysis.pattern)?.family.displayName ?? "—")
                 row("Difficulty", String(format: "%.1f / 10", analysis.difficultyScore))
+                row("Quality", String(format: "%.1f / 10", analysis.patternQualityScore))
                 row("Tier", analysis.difficultyTier.displayName)
                 row("Status", analysis.passed ? "PASS" : analysis.issues.joined(separator: ", "))
             }
@@ -46,7 +48,7 @@ struct LevelAnalyzerView: View {
     }
 
     private func displayName(_ raw: String) -> String {
-        LevelArchetype(rawValue: raw)?.displayName ?? raw
+        PuzzlePattern(rawValue: raw)?.displayName ?? raw
     }
 }
 #endif

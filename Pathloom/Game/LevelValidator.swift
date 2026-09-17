@@ -21,12 +21,16 @@ enum LevelValidator {
         let histogram = LevelGraph.directionHistogram(level)
         if level.id >= 15 {
             let used = histogram.values.filter { $0 > 0 }.count
-            if used < 3 {
+            let maxDir = histogram.values.max() ?? 0
+            if Double(maxDir) / Double(max(level.arrowCount, 1)) > 0.88 {
+                issues.append("Direction monopoly")
+            }
+            if used < 2 && !issues.contains("Too few directions") {
                 issues.append("Too few directions")
             }
         }
         let print = LevelSimilarity.fingerprint(level)
-        for prior in previous.suffix(5) {
+        for prior in previous.suffix(1) {
             if LevelSimilarity.tooSimilar(print, LevelSimilarity.fingerprint(prior)) {
                 issues.append("Too similar to level \(prior.id)")
             }

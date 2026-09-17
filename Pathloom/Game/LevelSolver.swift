@@ -23,11 +23,11 @@ enum LevelSolver {
         report(level: level, remaining: remaining)?.solution
     }
 
-    static func report(level: Level) -> SolverReport? {
-        report(level: level, remaining: level.arrows.map { Arrow(from: $0) })
+    static func report(level: Level, maxNodes: Int = 80_000) -> SolverReport? {
+        report(level: level, remaining: level.arrows.map { Arrow(from: $0) }, maxNodes: maxNodes)
     }
 
-    static func report(level: Level, remaining: [Arrow]) -> SolverReport? {
+    static func report(level: Level, remaining: [Arrow], maxNodes: Int = 80_000) -> SolverReport? {
         let actives = remaining.filter(\.isActive)
         if actives.isEmpty {
             return SolverReport(
@@ -93,6 +93,10 @@ enum LevelSolver {
                 }
             }
 
+            if nodes.count > maxNodes {
+                return nil
+            }
+
             for id in remainingIDs {
                 guard let arrow = idToArrow[id] else { continue }
                 var blocked = false
@@ -136,7 +140,9 @@ enum LevelSolver {
                 ArrowData(id: $0.id, row: $0.position.row, column: $0.position.column, direction: $0.direction)
             },
             seed: level.seed,
-            archetype: level.archetype
+            archetype: level.archetype,
+            patternType: level.patternType,
+            patternFamily: level.patternFamily
         )
         let edges = LevelGraph.blockingAdjacency(startLevel)
         let depth = LevelGraph.longestChain(edges)

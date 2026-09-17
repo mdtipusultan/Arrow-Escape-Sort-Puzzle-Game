@@ -6,7 +6,10 @@ enum GenerateCatalogMain {
         let output = CommandLine.arguments.count > 1
             ? CommandLine.arguments[1]
             : "Pathloom/Resources/Levels.json"
-        let data = try LevelCatalogBuilder.jsonData()
+        let count = CommandLine.arguments.count > 2
+            ? (Int(CommandLine.arguments[2]) ?? AppConstants.totalLevels)
+            : AppConstants.totalLevels
+        let data = try LevelCatalogBuilder.jsonData(count: count)
         let url = URL(fileURLWithPath: output)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try data.write(to: url)

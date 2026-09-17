@@ -4,7 +4,7 @@ import XCTest
 final class LevelLoaderTests: XCTestCase {
     func testLevelLoadingFromBundle() throws {
         let catalog = try LevelLoader().loadCatalog()
-        XCTAssertGreaterThanOrEqual(catalog.levels.count, 100)
+        XCTAssertGreaterThanOrEqual(catalog.levels.count, 200)
         XCTAssertEqual(catalog.levels.first?.id, 1)
         XCTAssertEqual(try LevelLoader().level(id: 1).gridSize, catalog.levels[0].gridSize)
     }

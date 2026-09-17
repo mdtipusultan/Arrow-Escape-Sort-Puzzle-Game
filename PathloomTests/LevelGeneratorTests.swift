@@ -13,7 +13,7 @@ final class LevelGeneratorTests: XCTestCase {
         let spec = LevelSpec(
             id: 18,
             difficulty: .easy,
-            archetype: .bottleneck,
+            archetype: .singleBottleneck,
             gridSize: 6,
             arrowCount: 10,
             targetDepth: 3...8,
@@ -26,6 +26,12 @@ final class LevelGeneratorTests: XCTestCase {
         XCTAssertTrue(LevelSolver.isSolvable(level!))
         XCTAssertGreaterThanOrEqual(level!.arrowCount, 8)
         XCTAssertGreaterThan(LevelGraph.dependencyCount(LevelGraph.blockingAdjacency(level!)), 0)
+    }
+
+    func testPatternLibraryCoversProfessionalFamilies() {
+        XCTAssertGreaterThanOrEqual(PuzzlePattern.allCases.count, 46)
+        XCTAssertTrue(PuzzlePattern.allCases.contains(where: { $0.family == .chain }))
+        XCTAssertTrue(PuzzlePattern.allCases.contains(where: { $0.family == .hybrid }))
     }
 
     func testHandcraftedOpeningLevelsAreSolvable() {

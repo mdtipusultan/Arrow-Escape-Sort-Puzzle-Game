@@ -48,10 +48,14 @@ enum LevelGraph {
 
     static func longestChain(_ edges: [Int: [Int]]) -> Int {
         var memo: [Int: Int] = [:]
+        var onStack: Set<Int> = []
         func depth(_ node: Int) -> Int {
             if let cached = memo[node] { return cached }
+            if onStack.contains(node) { return 1 }
+            onStack.insert(node)
             let children = edges[node] ?? []
             let value = 1 + (children.map(depth).max() ?? 0)
+            onStack.remove(node)
             memo[node] = value
             return value
         }

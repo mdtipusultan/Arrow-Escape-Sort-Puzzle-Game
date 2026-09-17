@@ -16,6 +16,8 @@ struct LevelAnalysis: Sendable, Equatable {
     var nodesExpanded: Int
     var density: Double
     var dependencyCount: Int
+    var distinctDirections: Int
+    var patternQualityScore: Double
     var passed: Bool
     var issues: [String]
 }
@@ -48,7 +50,7 @@ enum LevelAnalyzer {
         let clusters = LevelGraph.clusterCount(level)
         let expanded = report?.nodesExpanded ?? 0
         let histogram = LevelGraph.directionHistogram(level)
-        let distinctDirections = histogram.values.filter { $0 > 0 }.count
+        let distinctDirectionCount = histogram.values.filter { $0 > 0 }.count
         let misleading = max(0, initial - 1)
 
         let score = difficultyScore(
@@ -62,16 +64,38 @@ enum LevelAnalyzer {
             misleading: misleading,
             solutionDepth: depth,
             nodesExpanded: expanded,
-            distinctDirections: distinctDirections
+            distinctDirections: distinctDirectionCount
         )
 
         if level.arrowCount > 1 && deps == 0 {
             issues.append("No dependencies")
         }
+        if level.id >= 15 {
+            let maxDir = histogram.values.max() ?? 0
+            if Double(maxDir) / Double(max(level.arrowCount, 1)) > 0.88 {
+                issues.append("Direction monopoly")
+            }
+            if distinctDirectionCount < 2 {
+                issues.append("Too few directions")
+            }
+        }
+        if density > 0.72 {
+            issues.append("Density too high")
+        }
+
+        let quality = min(10, max(0,
+            (report != nil ? 2 : 0) +
+            min(2, Double(deps) / 10) +
+            min(1.5, Double(depth) / 8) +
+            (distinctDirectionCount >= 3 ? 1 : 0) +
+            ((1...4).contains(initial) ? 1 : 0) +
+            ((0.1...0.55).contains(density) ? 1 : 0) +
+            min(1, Double(branches) / 4)
+        ))
 
         return LevelAnalysis(
             levelID: level.id,
-            pattern: level.archetype ?? "unknown",
+            pattern: level.resolvedPatternType,
             difficultyScore: score,
             arrows: level.arrowCount,
             gridSize: level.gridSize,
@@ -85,6 +109,8 @@ enum LevelAnalyzer {
             nodesExpanded: expanded,
             density: density,
             dependencyCount: deps,
+            distinctDirections: distinctDirectionCount,
+            patternQualityScore: (quality * 10).rounded() / 10,
             passed: issues.isEmpty && report != nil,
             issues: issues
         )

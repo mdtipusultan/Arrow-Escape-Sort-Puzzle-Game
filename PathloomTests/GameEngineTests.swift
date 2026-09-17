@@ -60,6 +60,7 @@ final class GameEngineTests: XCTestCase {
         XCTAssertEqual(engine.remainingCount, 0)
     }
 
+    @MainActor
     func testCompletedLevelUnlocksNextLevel() {
         let defaults = UserDefaults(suiteName: "pathloom.tests.progress")!
         defaults.removePersistentDomain(forName: "pathloom.tests.progress")

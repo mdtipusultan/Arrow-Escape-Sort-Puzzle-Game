@@ -19,7 +19,7 @@ enum LevelSimilarity {
         return Fingerprint(
             gridSize: level.gridSize,
             arrowCount: level.arrowCount,
-            archetype: level.archetype ?? analyzed.pattern,
+            archetype: level.resolvedPatternType,
             directions: directions,
             occupancyHash: occupancyHash(level),
             depth: analyzed.solutionDepth,

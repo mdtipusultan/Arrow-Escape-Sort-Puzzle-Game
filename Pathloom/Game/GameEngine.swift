@@ -132,8 +132,13 @@ struct GameEngine: Equatable, Sendable {
             arrows: active,
             seed: level.seed,
             archetype: level.archetype,
+            patternType: level.patternType,
+            patternFamily: level.patternFamily,
             difficultyScore: level.difficultyScore,
-            solutionDepth: level.solutionDepth
+            solutionDepth: level.solutionDepth,
+            branchingFactor: level.branchingFactor,
+            bottleneckCount: level.bottleneckCount,
+            clusterCount: level.clusterCount
         )
     }
 }
