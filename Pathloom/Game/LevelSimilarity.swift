@@ -40,6 +40,7 @@ enum LevelSimilarity {
             let dirDelta = zip(a.directions, b.directions).reduce(0) { $0 + abs($1.0 - $1.1) }
             if dirDelta <= 1 && a.depth == b.depth { return true }
         }
+        if a.occupancyHash == b.occupancyHash { return true }
         return false
     }
 

@@ -5,6 +5,7 @@ struct GameView: View {
     @Environment(\.dismiss) private var dismiss
 
     let level: Level
+    var onReturnToMap: ((Int) -> Void)?
     @State private var viewModel: GameViewModel?
 
     var body: some View {
@@ -62,7 +63,7 @@ struct GameView: View {
                     stars: viewModel.engine.starRating,
                     best: services.progress.progress.best(for: viewModel.level.id),
                     hasNext: viewModel.level.id < AppConstants.totalLevels,
-                    onNext: { goNext() },
+                    onContinue: { returnToMap(from: viewModel.level.id) },
                     onReplay: { viewModel.restart() }
                 )
             }
@@ -127,13 +128,11 @@ struct GameView: View {
         return min(widthCap, heightCap)
     }
 
-    private func goNext() {
-        guard let current = viewModel else { return }
-        let nextID = current.level.id + 1
-        guard nextID <= AppConstants.totalLevels else {
+    private func returnToMap(from completedID: Int) {
+        if let onReturnToMap {
+            onReturnToMap(completedID)
+        } else {
             dismiss()
-            return
         }
-        viewModel = GameViewModel(level: services.level(id: nextID), services: services)
     }
 }

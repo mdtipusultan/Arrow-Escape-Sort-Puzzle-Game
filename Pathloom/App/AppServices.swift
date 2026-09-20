@@ -12,6 +12,7 @@ final class AppServices {
 
     private(set) var catalog: LevelCatalog
     private(set) var loadError: LevelLoaderError?
+    var pendingMapFocus: Int?
 
     init(
         settings: SettingsStore = SettingsStore(),

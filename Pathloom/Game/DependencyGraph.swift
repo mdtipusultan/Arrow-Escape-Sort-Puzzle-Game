@@ -153,13 +153,12 @@ enum DependencyGraphFactory {
 
         while builder.nodeCount < n {
             let cluster = builder.clusters[builder.nodeCount] ?? 0
-            if builder.nodeCount > 0 && rng.next() % 3 == 0 {
-                let parent = Int(rng.next() % UInt64(builder.nodeCount)) + 1
-                let child = builder.node(cluster: cluster)
+            let parent = Int(rng.next() % UInt64(max(builder.nodeCount, 1))) + 1
+            let child = builder.node(cluster: cluster)
+            if n <= 8 && rng.next() % 5 == 0 {
+                builder.decoys.insert(child)
+            } else if parent >= 1 && parent != child {
                 builder.add(parent, child)
-            } else {
-                let id = builder.node(cluster: cluster)
-                builder.decoys.insert(id)
             }
         }
 

@@ -67,7 +67,7 @@ enum PatternEngine {
 
     static func generate(spec: LevelSpec, previous: [Level] = []) -> Level? {
         var rng = SplitMix64(seed: UInt64(bitPattern: Int64(spec.seed)))
-        let previousPrints = previous.suffix(3).map { LevelSimilarity.fingerprint($0) }
+        let previousPrints = previous.suffix(8).map { LevelSimilarity.fingerprint($0) }
         var best: ScoredCandidate?
         let budget = max(12, spec.candidateBudget)
 
@@ -79,8 +79,8 @@ enum PatternEngine {
                 continue
             }
 
-            let relax = attempt > budget * 2 / 3
-            if !passesTargets(analysis, spec: spec, relax: relax) { continue }
+            let relax = attempt > budget * 2 / 3 && spec.id < 81
+            if !DifficultyAnalyzer.meetsIntent(analysis, spec: spec, relax: relax) { continue }
 
             let fingerprint = LevelSimilarity.fingerprint(draft, analysis: analysis)
             if previousPrints.contains(where: { LevelSimilarity.tooSimilar(fingerprint, $0) }) {
@@ -88,7 +88,7 @@ enum PatternEngine {
             }
 
             let quality = PatternQuality.score(analysis: analysis, spec: spec, previous: previous)
-            if quality < (relax ? 2.2 : spec.id <= 10 ? 1.5 : 3.0) { continue }
+            if quality < (relax ? 2.8 : spec.id <= 10 ? 1.5 : spec.id >= 61 ? 4.2 : 3.4) { continue }
 
             let stamped = stamp(draft, spec: spec, analysis: analysis)
             let scored = ScoredCandidate(level: stamped, analysis: analysis, quality: quality)
@@ -96,7 +96,7 @@ enum PatternEngine {
                 || (abs(scored.quality - best!.quality) <= 0.05 && closerDifficulty(scored.analysis, spec: spec, than: best!.analysis)) {
                 best = scored
             }
-            if scored.quality >= 7.5 && passesTargets(analysis, spec: spec, relax: false) {
+            if scored.quality >= 7.5 && DifficultyAnalyzer.meetsIntent(analysis, spec: spec, relax: false) {
                 break
             }
         }
@@ -170,24 +170,6 @@ enum PatternEngine {
             bottleneckCount: analysis.bottlenecks,
             clusterCount: analysis.clusters
         )
-    }
-
-    private static func passesTargets(_ analysis: LevelAnalysis, spec: LevelSpec, relax: Bool) -> Bool {
-        if analysis.initialValidMoves < 1 { return false }
-        if spec.arrowCount > 4 && analysis.dependencyCount == 0 { return false }
-        if spec.id >= 15 {
-            if analysis.distinctDirections < 2 { return false }
-            if analysis.distinctDirections == 1 { return false }
-        }
-        if relax {
-            return analysis.solutionDepth >= max(1, spec.targetDepth.lowerBound - 3)
-        }
-        if analysis.solutionDepth < spec.targetDepth.lowerBound { return false }
-        if analysis.solutionDepth > spec.targetDepth.upperBound + 4 { return false }
-        if analysis.initialValidMoves < spec.targetInitial.lowerBound { return false }
-        if analysis.initialValidMoves > spec.targetInitial.upperBound + 2 { return false }
-        if analysis.difficultyScore + 1.8 < spec.minScore { return false }
-        return true
     }
 
     private static func closerDifficulty(_ a: LevelAnalysis, spec: LevelSpec, than b: LevelAnalysis) -> Bool {

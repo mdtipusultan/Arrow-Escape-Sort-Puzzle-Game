@@ -34,6 +34,26 @@ final class LevelGeneratorTests: XCTestCase {
         XCTAssertTrue(PuzzlePattern.allCases.contains(where: { $0.family == .hybrid }))
     }
 
+    func testConstructorBuildsSolvableStrategicLevel() {
+        let spec = LevelSpec(
+            id: 48,
+            difficulty: .veryHard,
+            archetype: .crossLock,
+            gridSize: 8,
+            arrowCount: 18,
+            targetDepth: 8...14,
+            targetInitial: 1...2,
+            minScore: 5.5,
+            seed: 48_048
+        )
+        let level = PuzzleConstructor.build(spec: spec)
+        XCTAssertNotNil(level)
+        XCTAssertTrue(LevelSolver.isSolvable(level!))
+        XCTAssertGreaterThanOrEqual(level!.arrowCount, 14)
+        XCTAssertLessThanOrEqual(LevelGraph.initialMoveIDs(level!).count, 4)
+        XCTAssertGreaterThan(LevelGraph.dependencyCount(LevelGraph.blockingAdjacency(level!)), 6)
+    }
+
     func testHandcraftedOpeningLevelsAreSolvable() {
         for id in 1...10 {
             let spec = LevelProgression.spec(for: id)

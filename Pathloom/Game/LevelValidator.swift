@@ -30,9 +30,27 @@ enum LevelValidator {
             }
         }
         let print = LevelSimilarity.fingerprint(level)
-        for prior in previous.suffix(1) {
+        for prior in previous.suffix(8) {
             if LevelSimilarity.tooSimilar(print, LevelSimilarity.fingerprint(prior)) {
                 issues.append("Too similar to level \(prior.id)")
+            }
+        }
+        if level.id >= 61 {
+            let analysis = LevelAnalyzer.analyze(level)
+            if analysis.solutionDepth < 6 {
+                issues.append("Expert level too shallow")
+            }
+            if analysis.initialValidMoves > 4 {
+                issues.append("Expert level too many opening moves")
+            }
+        }
+        if level.id >= 80 {
+            let analysis = LevelAnalyzer.analyze(level)
+            if analysis.solutionDepth < 8 {
+                issues.append("Late level too shallow")
+            }
+            if analysis.initialValidMoves > 5 {
+                issues.append("Late level too many opening moves")
             }
         }
         return issues

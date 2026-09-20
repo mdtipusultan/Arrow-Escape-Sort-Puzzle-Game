@@ -27,7 +27,40 @@ enum LevelSolver {
         report(level: level, remaining: level.arrows.map { Arrow(from: $0) }, maxNodes: maxNodes)
     }
 
+    static func sequenceClears(_ order: [Int], level: Level) -> Bool {
+        var remaining = Dictionary(uniqueKeysWithValues: level.arrows.map { ($0.id, $0) })
+        if order.count != remaining.count { return false }
+        var seen: Set<Int> = []
+        for id in order {
+            guard seen.insert(id).inserted, let arrow = remaining[id] else { return false }
+            var occupied: [GridPosition: Int] = [:]
+            occupied.reserveCapacity(remaining.count)
+            for item in remaining.values {
+                occupied[item.position] = item.id
+            }
+            if !LevelGraph.canEscape(arrow, occupancy: occupied, gridSize: level.gridSize) {
+                return false
+            }
+            remaining.removeValue(forKey: id)
+        }
+        return remaining.isEmpty
+    }
+
     static func report(level: Level, remaining: [Arrow], maxNodes: Int = 80_000) -> SolverReport? {
+        let scaledCap = max(maxNodes, min(280_000, 24_000 + remaining.count * 5_000))
+        if remaining.count >= 18 {
+            if let dfs = search(level: level, remaining: remaining, maxNodes: scaledCap, depthFirst: true) {
+                return dfs
+            }
+            return search(level: level, remaining: remaining, maxNodes: scaledCap, depthFirst: false)
+        }
+        if let bfs = search(level: level, remaining: remaining, maxNodes: scaledCap, depthFirst: false) {
+            return bfs
+        }
+        return search(level: level, remaining: remaining, maxNodes: scaledCap, depthFirst: true)
+    }
+
+    private static func search(level: Level, remaining: [Arrow], maxNodes: Int, depthFirst: Bool) -> SolverReport? {
         let actives = remaining.filter(\.isActive)
         if actives.isEmpty {
             return SolverReport(
@@ -70,14 +103,14 @@ enum LevelSolver {
         let startMask = mask(for: ids)
         var visited: Set<UInt64> = [startMask]
         var nodes: [Node] = [Node(state: startMask, movedID: -1, parent: -1)]
-        var head = 0
+        var stack: [Int] = [0]
         var goalIndex: Int?
 
-        while head < nodes.count {
-            let current = nodes[head]
+        while let currentIndex = stack.popLast() {
+            let current = nodes[currentIndex]
             let state = current.state
             if state == 0 {
-                goalIndex = head
+                goalIndex = currentIndex
                 break
             }
 
@@ -97,6 +130,7 @@ enum LevelSolver {
                 return nil
             }
 
+            var spawned: [Int] = []
             for id in remainingIDs {
                 guard let arrow = idToArrow[id] else { continue }
                 var blocked = false
@@ -114,12 +148,17 @@ enum LevelSolver {
                 let next = state & ~(UInt64(1) << index)
                 if visited.contains(next) { continue }
                 visited.insert(next)
-                nodes.append(Node(state: next, movedID: id, parent: head))
+                nodes.append(Node(state: next, movedID: id, parent: currentIndex))
+                spawned.append(nodes.count - 1)
             }
-            head += 1
+            if depthFirst {
+                stack.append(contentsOf: spawned.reversed())
+            } else {
+                stack = spawned + stack
+            }
         }
 
-        guard let goal = goalIndex ?? (nodes.last?.state == 0 ? nodes.count - 1 : nil) else {
+        guard let goal = goalIndex else {
             return nil
         }
 

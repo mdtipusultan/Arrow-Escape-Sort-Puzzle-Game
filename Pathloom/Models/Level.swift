@@ -7,6 +7,7 @@ enum Difficulty: String, Codable, Sendable, CaseIterable {
     case hard
     case veryHard
     case expert
+    case extreme
     case challenge
     case master
 
@@ -18,6 +19,7 @@ enum Difficulty: String, Codable, Sendable, CaseIterable {
         case .hard: "Hard"
         case .veryHard: "Very Hard"
         case .expert: "Expert"
+        case .extreme: "Extreme"
         case .challenge: "Challenge"
         case .master: "Master"
         }

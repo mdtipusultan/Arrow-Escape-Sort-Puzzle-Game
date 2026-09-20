@@ -4,6 +4,7 @@ struct HomeView: View {
     @Environment(AppServices.self) private var services
     @State private var path: [HomeRoute] = []
     @State private var appeared = false
+    @State private var mapFocusLevel: Int?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -27,13 +28,16 @@ struct HomeView: View {
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
                 case .levels:
-                    LevelSelectView { levelID in
+                    LevelSelectView(focusLevelID: mapFocusLevel) { levelID in
                         path.append(.game(levelID))
                     }
                 case .settings:
                     SettingsView()
                 case .game(let id):
-                    GameView(level: services.level(id: id))
+                    GameView(level: services.level(id: id), onReturnToMap: { completedID in
+                        mapFocusLevel = min(completedID + 1, model.totalLevels)
+                        path = [.levels]
+                    })
                 }
             }
             .onAppear {
@@ -73,10 +77,10 @@ struct HomeView: View {
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 16)
 
-            PathloomButton(title: "Levels", systemImage: "square.grid.2x2.fill", prominent: false) {
+            PathloomButton(title: "Journey", systemImage: "map.fill", prominent: false) {
                 path.append(.levels)
             }
-            .accessibilityHint("Browse and choose a level")
+            .accessibilityHint("Open the level map")
             .opacity(appeared ? 1 : 0)
 
             statsRow(model)

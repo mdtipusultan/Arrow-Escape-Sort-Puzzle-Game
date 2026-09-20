@@ -6,7 +6,7 @@ struct LevelCompleteView: View {
     let stars: Int
     let best: Int?
     let hasNext: Bool
-    var onNext: () -> Void
+    var onContinue: () -> Void
     var onReplay: () -> Void
 
     @State private var appeared = false
@@ -37,9 +37,7 @@ struct LevelCompleteView: View {
                     stat("Par", "\(parMoves)")
                     stat("Best", best.map(String.init) ?? "—")
                 }
-                if hasNext {
-                    PathloomButton(title: "Next Level", systemImage: "arrow.right", action: onNext)
-                }
+                PathloomButton(title: hasNext ? "Continue" : "Finish", systemImage: "map.fill", action: onContinue)
                 PathloomButton(title: "Replay", systemImage: "arrow.counterclockwise", prominent: false, action: onReplay)
             }
             .padding(PathloomSpacing.lg)

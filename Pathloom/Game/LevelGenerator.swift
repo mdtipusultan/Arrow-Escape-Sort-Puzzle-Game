@@ -5,14 +5,26 @@ enum LevelGenerator {
         if let crafted = handcrafted(id: spec.id) {
             return PatternEngine.finalize(crafted, spec: spec) ?? crafted
         }
+        if let constructed = PuzzleConstructor.build(spec: spec, previous: previous) {
+            return constructed
+        }
+        if let generated = PatternEngine.generate(spec: spec, previous: previous),
+           DifficultyAnalyzer.meetsIntent(LevelAnalyzer.analyze(generated), spec: spec, relax: spec.id < 21) {
+            return generated
+        }
+        if let constructed = PuzzleConstructor.build(spec: spec, previous: previous) {
+            return constructed
+        }
         if let generated = PatternEngine.generate(spec: spec, previous: previous) {
             return generated
         }
-        return PatternEngine.finalize(designedGuarantee(spec: spec), spec: spec) ?? designedGuarantee(spec: spec)
+        return PuzzleConstructor.build(spec: spec, previous: previous)
+            ?? PatternEngine.finalize(designedGuarantee(spec: spec), spec: spec)
+            ?? designedGuarantee(spec: spec)
     }
 
     static func guaranteedLevel(spec: LevelSpec) -> Level {
-        designedGuarantee(spec: spec)
+        PuzzleConstructor.build(spec: spec) ?? designedGuarantee(spec: spec)
     }
 
     /// Structured fallback: disjoint-axis chains so paths cannot deadlock.

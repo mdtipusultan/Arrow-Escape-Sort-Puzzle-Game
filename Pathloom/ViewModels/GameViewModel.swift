@@ -123,6 +123,7 @@ final class GameViewModel {
                 totalLevels: AppConstants.totalLevels,
                 stars: engine.starRating
             )
+            services.pendingMapFocus = min(level.id + 1, AppConstants.totalLevels)
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(AppConstants.Animation.completeHold))
                 self.state = .completed
