@@ -141,7 +141,11 @@ private struct MapJourneyScrollView: View {
                         contentHeight: layout.size.height,
                         animated: scrollAnimated,
                         applyToken: "\(focusedLevelID)-\(Int(layout.size.width))-\(Int(layout.size.height))",
-                        onApplied: { isPositioned = true }
+                        onApplied: {
+                            Task { @MainActor in
+                                isPositioned = true
+                            }
+                        }
                     )
                     .frame(width: 1, height: 1)
                     .allowsHitTesting(false)
@@ -160,7 +164,11 @@ private struct MapJourneyScrollView: View {
             .coordinateSpace(name: "levelMap")
             .scrollIndicators(.hidden)
             .opacity(isPositioned ? 1 : 0)
-            .onPreferenceChange(MapScrollOffsetKey.self) { scrollY = $0 }
+            .onPreferenceChange(MapScrollOffsetKey.self) { value in
+                if scrollY != value {
+                    scrollY = value
+                }
+            }
             .onAppear {
                 highlightID = focusID
                 scrollAnimated = false

@@ -49,14 +49,17 @@ struct MapScrollOffsetController: UIViewRepresentable {
         ) {
             if lastSuccessfulToken == token { return }
             lastToken = token
-            attempt(
-                view: view,
-                targetY: targetY,
-                contentHeight: contentHeight,
-                animated: animated,
-                token: token,
-                remaining: 20
-            )
+            Task { @MainActor [weak self] in
+                await Task.yield()
+                self?.attempt(
+                    view: view,
+                    targetY: targetY,
+                    contentHeight: contentHeight,
+                    animated: animated,
+                    token: token,
+                    remaining: 20
+                )
+            }
         }
 
         private func attempt(
@@ -67,11 +70,15 @@ struct MapScrollOffsetController: UIViewRepresentable {
             token: String,
             remaining: Int
         ) {
-            guard lastToken == token else { return }
+            guard lastToken == token, lastSuccessfulToken != token else { return }
 
             let finish = {
+                guard self.lastSuccessfulToken != token else { return }
                 self.lastSuccessfulToken = token
-                self.onApplied?()
+                Task { @MainActor [weak self] in
+                    await Task.yield()
+                    self?.onApplied?()
+                }
             }
 
             guard remaining > 0 else {
