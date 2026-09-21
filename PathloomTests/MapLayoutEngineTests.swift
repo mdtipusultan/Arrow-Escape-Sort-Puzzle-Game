@@ -132,4 +132,38 @@ final class MapProgressManagerTests: XCTestCase {
         XCTAssertEqual(MapProgressManager.currentLevel(progress: progress, totalLevels: 200), 200)
         XCTAssertEqual(MapProgressManager.focusLevelID(progress: progress, totalLevels: 200, pendingReveal: nil), 200)
     }
+
+    func testCompletingLevelThreeFocusesLevelFour() {
+        var progress = PlayerProgress.fresh
+        progress.completedLevels = [1, 2, 3]
+        progress.highestUnlockedLevel = 4
+        XCTAssertEqual(MapProgressManager.currentLevel(progress: progress, totalLevels: 200), 4)
+        XCTAssertEqual(
+            MapProgressManager.focusLevelID(progress: progress, totalLevels: 200, pendingReveal: 4),
+            4
+        )
+    }
+}
+
+final class MapScrollPositioningTests: XCTestCase {
+    func testEarlyLevelOffsetStaysAtStartNotMidJourney() {
+        let layout = MapLayoutEngine.layout(
+            levelCount: 200,
+            canvasWidth: 390,
+            safeLeft: 16,
+            safeRight: 16,
+            isPad: false
+        )
+        let viewport: CGFloat = 720
+        let early = layout.scrollOffset(for: 4, viewportHeight: viewport)
+        let mid = layout.scrollOffset(for: 125, viewportHeight: viewport)
+        let late = layout.scrollOffset(for: 200, viewportHeight: viewport)
+        let maxOffset = layout.size.height - viewport
+
+        XCTAssertGreaterThan(early, mid, "Level 4 must sit below mid-journey (level 125)")
+        XCTAssertGreaterThan(mid, late)
+        XCTAssertGreaterThan(early, maxOffset * 0.85, "Level 4 should be near the start at the bottom")
+        XCTAssertLessThan(late, maxOffset * 0.15, "Level 200 should be near the top")
+        XCTAssertGreaterThan(layout.node(for: 4)?.position.y ?? 0, layout.node(for: 125)?.position.y ?? 0)
+    }
 }

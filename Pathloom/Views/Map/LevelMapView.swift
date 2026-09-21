@@ -7,8 +7,8 @@ private struct MapScrollOffsetKey: PreferenceKey {
     }
 }
 
-private struct MapScrollAnchorID: Hashable {
-    let levelID: Int
+private enum MapFocusAnchor {
+    case focus
 }
 
 struct LevelMapView: View {
@@ -96,8 +96,12 @@ private struct MapJourneyScrollView: View {
 
     @State private var highlightID: Int?
     @State private var scrollY: CGFloat = 0
-    @State private var didAutoScroll = false
     @State private var isPositioned = false
+    @State private var scrollAnimated = false
+
+    private var focusedLevelID: Int {
+        min(max(highlightID ?? focusID, 1), totalLevels)
+    }
 
     var body: some View {
         ScrollViewReader { reader in
@@ -129,8 +133,19 @@ private struct MapJourneyScrollView: View {
                     )
                     .position(layout.endPoint)
 
-                    scrollAnchors
+                    focusLadder
                     nodesLayer
+
+                    MapScrollOffsetController(
+                        targetY: layout.node(for: focusedLevelID)?.position.y ?? layout.startPoint.y,
+                        contentHeight: layout.size.height,
+                        animated: scrollAnimated,
+                        applyToken: "\(focusedLevelID)-\(Int(layout.size.width))-\(Int(layout.size.height))",
+                        onApplied: { isPositioned = true }
+                    )
+                    .frame(width: 1, height: 1)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
                 }
                 .frame(width: layout.size.width, height: layout.size.height)
                 .background(
@@ -146,16 +161,66 @@ private struct MapJourneyScrollView: View {
             .scrollIndicators(.hidden)
             .opacity(isPositioned ? 1 : 0)
             .onPreferenceChange(MapScrollOffsetKey.self) { scrollY = $0 }
-            .task {
-                await performInitialScrollIfNeeded(reader: reader, id: focusID)
-                isPositioned = true
+            .onAppear {
+                highlightID = focusID
+                scrollAnimated = false
+            }
+            .onChange(of: focusID) { _, newValue in
+                highlightID = newValue
+                scrollAnimated = false
+                scrollToFocus(reader: reader, animated: false)
             }
             .onChange(of: services.pendingMapFocus) { _, newValue in
                 guard let newValue else { return }
                 highlightID = newValue
-                scrollToCurrent(reader: reader, id: newValue, animated: true)
+                scrollAnimated = true
+                isPositioned = true
+                scrollToFocus(reader: reader, animated: true)
                 services.pendingMapFocus = nil
             }
+            .task(id: "\(focusedLevelID)-\(Int(layout.size.height))") {
+                highlightID = focusID
+                try? await Task.sleep(for: .milliseconds(16))
+                guard !Task.isCancelled else { return }
+                scrollToFocus(reader: reader, animated: false)
+                try? await Task.sleep(for: .milliseconds(80))
+                guard !Task.isCancelled else { return }
+                scrollToFocus(reader: reader, animated: false)
+                try? await Task.sleep(for: .milliseconds(300))
+                isPositioned = true
+                services.pendingMapFocus = nil
+            }
+        }
+    }
+
+    /// Real layout frames (not `.position`) so `ScrollViewReader` can find the current level.
+    private var focusLadder: some View {
+        let y = layout.node(for: focusedLevelID)?.position.y ?? layout.startPoint.y
+        return VStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.white.opacity(0.001))
+                .frame(width: 1, height: max(y, 0))
+            Rectangle()
+                .fill(Color.white.opacity(0.001))
+                .frame(width: 8, height: 8)
+                .id(MapFocusAnchor.focus)
+            Rectangle()
+                .fill(Color.white.opacity(0.001))
+                .frame(width: 1, height: max(layout.size.height - y - 8, 0))
+        }
+        .frame(width: 8, height: layout.size.height, alignment: .top)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func scrollToFocus(reader: ScrollViewProxy, animated: Bool) {
+        let action = {
+            reader.scrollTo(MapFocusAnchor.focus, anchor: UnitPoint(x: 0.5, y: MapScrollPositioning.anchorY))
+        }
+        if animated {
+            withAnimation(.easeInOut(duration: 0.85)) { action() }
+        } else {
+            action()
         }
     }
 
@@ -164,15 +229,6 @@ private struct MapJourneyScrollView: View {
             let entranceY = section.yTop + (section.yBottom - section.yTop) * 0.86
             MapSectionView(section: section, width: layout.size.width)
                 .position(x: layout.size.width / 2, y: entranceY)
-        }
-    }
-
-    private var scrollAnchors: some View {
-        ForEach(layout.nodes) { node in
-            Color.clear
-                .frame(width: 1, height: 1)
-                .position(node.position)
-                .id(MapScrollAnchorID(levelID: node.levelID))
         }
     }
 
@@ -198,32 +254,6 @@ private struct MapJourneyScrollView: View {
             .accessibilityLabel(accessibilityLabel(id: node.levelID, state: state, stars: progress.stars(for: node.levelID)))
             .accessibilityHint(state == .locked ? "Complete earlier levels to unlock" : "Opens this puzzle")
             .accessibilityAddTraits(state == .current ? .isSelected : [])
-        }
-    }
-
-    @MainActor
-    private func performInitialScrollIfNeeded(reader: ScrollViewProxy, id: Int) async {
-        guard !didAutoScroll else { return }
-        didAutoScroll = true
-        highlightID = id
-        try? await Task.sleep(for: .milliseconds(16))
-        scrollToCurrent(reader: reader, id: id, animated: false)
-        try? await Task.sleep(for: .milliseconds(60))
-        scrollToCurrent(reader: reader, id: id, animated: false)
-        if services.pendingMapFocus != nil {
-            services.pendingMapFocus = nil
-        }
-    }
-
-    private func scrollToCurrent(reader: ScrollViewProxy, id: Int, animated: Bool) {
-        let target = min(max(id, 1), totalLevels)
-        let action = {
-            reader.scrollTo(MapScrollAnchorID(levelID: target), anchor: UnitPoint(x: 0.5, y: 0.38))
-        }
-        if animated {
-            withAnimation(.easeInOut(duration: 0.85)) { action() }
-        } else {
-            action()
         }
     }
 

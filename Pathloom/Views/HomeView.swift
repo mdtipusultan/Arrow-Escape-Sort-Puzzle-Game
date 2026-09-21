@@ -78,7 +78,11 @@ struct HomeView: View {
             .offset(y: appeared ? 0 : 16)
 
             PathloomButton(title: "Journey", systemImage: "map.fill", prominent: false) {
-                mapFocusLevel = nil
+                services.pendingMapFocus = nil
+                mapFocusLevel = MapProgressManager.currentLevel(
+                    progress: services.progress.progress,
+                    totalLevels: model.totalLevels
+                )
                 path.append(.levels)
             }
             .accessibilityHint("Open the level map")

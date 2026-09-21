@@ -35,6 +35,33 @@ struct MapLayout: Equatable, Sendable {
     var pathPoints: [CGPoint] {
         [startPoint] + nodes.map(\.position) + [endPoint]
     }
+
+    /// Content offset that places `levelID` in the visible viewport.
+    /// Level 1 sits at the bottom of the canvas, so early progress scrolls down, not to mid-map.
+    func scrollOffset(for levelID: Int, viewportHeight: CGFloat, anchorY: CGFloat = MapScrollPositioning.anchorY) -> CGFloat {
+        let targetY = node(for: levelID)?.position.y ?? startPoint.y
+        return MapScrollPositioning.offset(
+            targetY: targetY,
+            contentHeight: size.height,
+            viewportHeight: viewportHeight,
+            anchorY: anchorY
+        )
+    }
+}
+
+enum MapScrollPositioning {
+    static let anchorY: CGFloat = 0.38
+
+    static func offset(
+        targetY: CGFloat,
+        contentHeight: CGFloat,
+        viewportHeight: CGFloat,
+        anchorY: CGFloat = anchorY
+    ) -> CGFloat {
+        let viewport = max(viewportHeight, 1)
+        let maxOffset = max(contentHeight - viewport, 0)
+        return min(max(targetY - viewport * anchorY, 0), maxOffset)
+    }
 }
 
 struct MapLayoutMetrics: Equatable, Sendable {
