@@ -10,14 +10,15 @@ struct MapSectionView: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            Text(section.title.uppercased())
+            Text(section.subtitle.uppercased())
                 .font(.system(size: 11, weight: .bold, design: .rounded))
-                .tracking(1.6)
-                .foregroundStyle(theme.accent.opacity(0.85))
-            Text(section.subtitle)
+                .tracking(1.7)
+                .foregroundStyle(theme.accent.color.opacity(0.88))
+            Text(section.title)
                 .font(.system(.title3, design: .rounded).weight(.semibold))
-                .foregroundStyle(PathloomPalette.text.opacity(0.82))
-            Text("\(section.levelRange.lowerBound)–\(section.levelRange.upperBound)")
+                .foregroundStyle(PathloomPalette.text.opacity(0.88))
+                .multilineTextAlignment(.center)
+            Text("Levels \(section.levelRange.lowerBound)–\(section.levelRange.upperBound)")
                 .font(.system(.caption, design: .rounded).weight(.medium))
                 .foregroundStyle(PathloomPalette.mutedText)
         }
@@ -28,7 +29,7 @@ struct MapSectionView: View {
                 .fill(.ultraThinMaterial)
                 .overlay(
                     Capsule(style: .continuous)
-                        .stroke(theme.accent.opacity(0.18), lineWidth: 1)
+                        .stroke(theme.accent.color.opacity(0.20), lineWidth: 1)
                 )
         )
         .frame(width: width)

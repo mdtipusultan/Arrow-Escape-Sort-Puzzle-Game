@@ -51,6 +51,85 @@ final class MapLayoutEngineTests: XCTestCase {
         let chapters = MapLayoutEngine.chapters(for: 200)
         XCTAssertEqual(chapters.first?.range.lowerBound, 1)
         XCTAssertEqual(chapters.last?.range.upperBound, 200)
-        XCTAssertEqual(chapters.count, 9)
+        XCTAssertEqual(chapters.count, 8)
+        XCTAssertEqual(chapters.first?.title, "Sunthread Meadows")
+        XCTAssertEqual(chapters.last?.title, "Aurora Spire")
+    }
+
+    func testMilestonesMatchZoneBoundaries() {
+        XCTAssertTrue(MapLayoutEngine.isMilestone(25))
+        XCTAssertTrue(MapLayoutEngine.isMilestone(100))
+        XCTAssertTrue(MapLayoutEngine.isMilestone(200))
+        XCTAssertFalse(MapLayoutEngine.isMilestone(1))
+        XCTAssertFalse(MapLayoutEngine.isMilestone(10))
+    }
+
+    func testCompactPhoneKeepsNodesInsideSafeBand() {
+        let layout = MapLayoutEngine.layout(
+            levelCount: 200,
+            canvasWidth: 320,
+            safeLeft: 0,
+            safeRight: 0,
+            isPad: false
+        )
+        for node in layout.nodes {
+            XCTAssertGreaterThan(node.position.x, node.radius)
+            XCTAssertLessThan(node.position.x, layout.size.width - node.radius)
+        }
+    }
+
+    func testWindingPathDoesNotTeleportBetweenNeighbors() {
+        let layout = MapLayoutEngine.layout(
+            levelCount: 80,
+            canvasWidth: 390,
+            safeLeft: 16,
+            safeRight: 16,
+            isPad: false
+        )
+        for index in 1..<layout.nodes.count {
+            let dx = abs(layout.nodes[index].position.x - layout.nodes[index - 1].position.x)
+            XCTAssertLessThan(dx, 90, "Jump at \(index)-\(index + 1)")
+        }
+    }
+}
+
+final class MapProgressManagerTests: XCTestCase {
+    func testNewPlayerFocusesLevelOne() {
+        let progress = PlayerProgress.fresh
+        XCTAssertNil(MapProgressManager.lastCompletedLevel(progress: progress))
+        XCTAssertEqual(MapProgressManager.currentLevel(progress: progress, totalLevels: 200), 1)
+        XCTAssertEqual(MapProgressManager.nextPlayableLevel(progress: progress, totalLevels: 200), 1)
+        XCTAssertEqual(MapProgressManager.focusLevelID(progress: progress, totalLevels: 200, pendingReveal: nil), 1)
+    }
+
+    func testCompletedLevelFocusesNextPlayable() {
+        var progress = PlayerProgress.fresh
+        progress.completedLevels = Set(1...37)
+        progress.highestUnlockedLevel = 38
+        XCTAssertEqual(MapProgressManager.lastCompletedLevel(progress: progress), 37)
+        XCTAssertEqual(MapProgressManager.currentLevel(progress: progress, totalLevels: 200), 38)
+        XCTAssertEqual(MapProgressManager.nextPlayableLevel(progress: progress, totalLevels: 200), 38)
+        XCTAssertEqual(MapProgressManager.focusLevelID(progress: progress, totalLevels: 200, pendingReveal: nil), 38)
+        XCTAssertEqual(MapProgressManager.state(for: 37, progress: progress, currentID: 38), .completed)
+        XCTAssertEqual(MapProgressManager.state(for: 38, progress: progress, currentID: 38), .current)
+        XCTAssertEqual(MapProgressManager.state(for: 39, progress: progress, currentID: 38), .locked)
+    }
+
+    func testPendingRevealWinsOverCurrentProgress() {
+        var progress = PlayerProgress.fresh
+        progress.completedLevels = Set(1...37)
+        progress.highestUnlockedLevel = 38
+        XCTAssertEqual(
+            MapProgressManager.focusLevelID(progress: progress, totalLevels: 200, pendingReveal: 38),
+            38
+        )
+    }
+
+    func testAllClearedFocusesFinalLevel() {
+        var progress = PlayerProgress.fresh
+        progress.completedLevels = Set(1...200)
+        progress.highestUnlockedLevel = 200
+        XCTAssertEqual(MapProgressManager.currentLevel(progress: progress, totalLevels: 200), 200)
+        XCTAssertEqual(MapProgressManager.focusLevelID(progress: progress, totalLevels: 200, pendingReveal: nil), 200)
     }
 }

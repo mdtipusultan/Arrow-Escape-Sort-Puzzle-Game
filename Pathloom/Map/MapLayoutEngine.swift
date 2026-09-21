@@ -46,23 +46,23 @@ struct MapLayoutMetrics: Equatable, Sendable {
 
     var nodeRadius: CGFloat { isPad ? 28 : 24 }
     var milestoneRadius: CGFloat { isPad ? 34 : 30 }
-    var verticalSpacing: CGFloat { isPad ? 116 : 98 }
-    var sectionGap: CGFloat { isPad ? 64 : 48 }
-    var topReserved: CGFloat { 168 }
-    var bottomReserved: CGFloat { 196 }
+    var verticalSpacing: CGFloat { isPad ? 118 : 100 }
+    var sectionGap: CGFloat { isPad ? 72 : 56 }
+    var topReserved: CGFloat { 176 }
+    var bottomReserved: CGFloat { 210 }
 
     var leadingInset: CGFloat {
-        max(isPad ? 72 : 40, safeLeft + 12) + milestoneRadius
+        max(isPad ? 78 : 44, safeLeft + 12) + milestoneRadius
     }
 
     var trailingInset: CGFloat {
-        max(isPad ? 72 : 40, safeRight + 12) + milestoneRadius
+        max(isPad ? 78 : 44, safeRight + 12) + milestoneRadius
     }
 }
 
 enum MapLayoutEngine {
     static let patternSeed: UInt64 = 42_017
-    static let milestoneIDs: Set<Int> = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 200]
+    static let milestoneIDs: Set<Int> = [25, 50, 75, 100, 125, 150, 175, 200]
 
     static func layout(
         levelCount: Int,
@@ -93,7 +93,7 @@ enum MapLayoutEngine {
                 if offset > 0 {
                     cursor += metrics.verticalSpacing
                     if milestoneIDs.contains(id) {
-                        cursor += metrics.verticalSpacing * 0.18
+                        cursor += metrics.verticalSpacing * 0.16
                     }
                 }
                 yFromTop[id] = cursor
@@ -132,16 +132,16 @@ enum MapLayoutEngine {
                     title: chapter.title,
                     subtitle: chapter.subtitle,
                     levelRange: chapter.range,
-                    yTop: yTop - 52,
-                    yBottom: yBottom + 36
+                    yTop: yTop - 58,
+                    yBottom: yBottom + 40
                 )
             )
         }
 
         let first = nodes.first?.position ?? CGPoint(x: metrics.width / 2, y: contentBottom - 80)
         let last = nodes.last?.position ?? CGPoint(x: metrics.width / 2, y: metrics.topReserved)
-        let startPoint = CGPoint(x: metrics.width / 2, y: min(contentBottom - 48, first.y + 78))
-        let endPoint = CGPoint(x: last.x, y: max(48, last.y - 72))
+        let startPoint = CGPoint(x: metrics.width / 2, y: min(contentBottom - 52, first.y + 82))
+        let endPoint = CGPoint(x: last.x, y: max(52, last.y - 76))
 
         return MapLayout(
             nodes: nodes,
@@ -156,21 +156,21 @@ enum MapLayoutEngine {
         milestoneIDs.contains(id)
     }
 
-    /// 0 = far left, 1 = far right. Alternates lanes with controlled, non-periodic variation.
+    /// 0 = far left, 1 = far right. Smooth left-right lanes with organic drift.
     static func windingX(for levelID: Int, total: Int, isPad: Bool) -> CGFloat {
         let t = Double(levelID)
-        let progress = Double(levelID) / Double(max(total, 1))
-        let lane = sin(t * 0.33 + 0.18)
-        let wander = sin(t * 0.19 + 1.37) * 0.46
-        let ripple = sin(t * 0.71 + 2.63) * 0.14
-        let slow = sin(t * 0.07 + Double(levelID % 5) * 0.51) * 0.22
-        let hashed = hashJitter(levelID)
-        let milestoneSettle = milestoneIDs.contains(levelID) ? hashed * 0.12 : hashed * 0.28
-        let padStretch = isPad ? 1.0 : 0.92
-        let journey = 0.92 + (progress * 0.10)
-        let mixed = (lane * 0.52 + wander + ripple + slow + milestoneSettle) * padStretch * journey
-        let normalized = (mixed + 1.15) / 2.3
-        return CGFloat(min(max(normalized, 0.04), 0.96))
+        let sweep = 6.15
+        let snake = 0.5 - 0.5 * cos(t * .pi / sweep)
+        let meander = sin(t * 0.127 + 0.6) * 0.075
+        let ripple = sin(t * 0.53 + 1.9) * 0.035
+        let hashed = hashJitter(levelID) * 0.045
+        let milestonePull = milestoneIDs.contains(levelID) ? (0.5 - snake) * 0.16 : 0
+        let journey = 0.97 + 0.03 * (t / Double(max(total, 1)))
+        let amplitude = (isPad ? 0.78 : 0.68) * journey
+        let center = 0.50 + sin(t * 0.041) * 0.03
+        let mixed = center + ((snake - 0.5 + milestonePull) * amplitude) + meander + ripple + hashed
+        let edge: Double = isPad ? 0.05 : 0.06
+        return CGFloat(min(max(mixed, edge), 1 - edge))
     }
 
     static func chapters(for levelCount: Int) -> [MapChapter] {
@@ -195,7 +195,7 @@ enum MapLayoutEngine {
         chapters.firstIndex(where: { $0.range.contains(id) }) ?? 0
     }
 
-    private static func hashJitter(_ levelID: Int) -> Double {
+    static func hashJitter(_ levelID: Int) -> Double {
         var x = UInt64(levelID) &* 0x9E3779B97F4A7C15 &+ patternSeed
         x ^= x >> 30
         x = x &* 0xBF58476D1CE4E5B9
@@ -211,14 +211,13 @@ struct MapChapter: Equatable, Sendable {
     let subtitle: String
 
     static let standard: [MapChapter] = [
-        MapChapter(range: 1...20, title: "World 1", subtitle: "Dawn Meadows"),
-        MapChapter(range: 21...40, title: "World 2", subtitle: "Sky Isles"),
-        MapChapter(range: 41...60, title: "World 3", subtitle: "Twilight Groves"),
-        MapChapter(range: 61...80, title: "World 4", subtitle: "Ember Ridges"),
-        MapChapter(range: 81...100, title: "World 5", subtitle: "Moonlit Peaks"),
-        MapChapter(range: 101...125, title: "World 6", subtitle: "Aurora Fields"),
-        MapChapter(range: 126...150, title: "World 7", subtitle: "Crystal Canyons"),
-        MapChapter(range: 151...175, title: "World 8", subtitle: "Starfall Basin"),
-        MapChapter(range: 176...200, title: "World 9", subtitle: "Horizon's End")
+        MapChapter(range: 1...25, title: "Sunthread Meadows", subtitle: "First Light"),
+        MapChapter(range: 26...50, title: "Verdant Loomwood", subtitle: "Living Canopy"),
+        MapChapter(range: 51...75, title: "Glassbrook Vale", subtitle: "Crystal Waters"),
+        MapChapter(range: 76...100, title: "Nimbus Gallery", subtitle: "Skywalk"),
+        MapChapter(range: 101...125, title: "Violet Range", subtitle: "Dusk Ridges"),
+        MapChapter(range: 126...150, title: "Oldweave Ruins", subtitle: "Forgotten Arches"),
+        MapChapter(range: 151...175, title: "Nightloom Expanse", subtitle: "Starlit Basin"),
+        MapChapter(range: 176...200, title: "Aurora Spire", subtitle: "The Last Thread")
     ]
 }

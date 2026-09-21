@@ -7,7 +7,6 @@ struct LevelNodeView: View {
     let isHighlighted: Bool
 
     @State private var pulse = false
-    @State private var floatUp = false
 
     private var theme: MapWorldTheme {
         MapWorldTheme.theme(for: layout.sectionIndex)
@@ -15,9 +14,12 @@ struct LevelNodeView: View {
 
     private var visualRadius: CGFloat {
         switch state {
-        case .current: layout.radius + 6
-        case .completed, .available, .locked:
-            layout.isMilestone ? layout.radius : layout.radius
+        case .current:
+            return layout.radius + 6
+        case .completed, .available:
+            return layout.isMilestone ? layout.radius + 1 : layout.radius
+        case .locked:
+            return layout.radius
         }
     }
 
@@ -25,10 +27,16 @@ struct LevelNodeView: View {
         ZStack {
             if state == .current || isHighlighted {
                 Circle()
-                    .fill(theme.nodeGlow.opacity(0.28))
-                    .frame(width: visualRadius * 2.6, height: visualRadius * 2.6)
-                    .scaleEffect(pulse ? 1.08 : 0.92)
-                    .blur(radius: 1.5)
+                    .stroke(theme.nodeGlow.color.opacity(0.45), lineWidth: 2)
+                    .frame(width: visualRadius * 2.7, height: visualRadius * 2.7)
+                    .scaleEffect(pulse ? 1.08 : 0.90)
+                    .opacity(pulse ? 0.35 : 0.8)
+
+                Circle()
+                    .fill(theme.nodeGlow.color.opacity(0.24))
+                    .frame(width: visualRadius * 2.45, height: visualRadius * 2.45)
+                    .scaleEffect(pulse ? 1.06 : 0.94)
+                    .blur(radius: 1.2)
             }
 
             Circle()
@@ -36,7 +44,7 @@ struct LevelNodeView: View {
                 .frame(width: visualRadius * 2, height: visualRadius * 2)
                 .overlay(
                     Circle()
-                        .stroke(ringColor, lineWidth: layout.isMilestone ? 3.5 : 2)
+                        .stroke(ringColor, lineWidth: layout.isMilestone ? 3.4 : 2.1)
                 )
                 .shadow(color: shadowColor, radius: state == .current ? 10 : 4, y: 3)
 
@@ -44,14 +52,14 @@ struct LevelNodeView: View {
                 .foregroundStyle(contentColor)
 
             if layout.isMilestone {
-                Image(systemName: "rhombus.fill")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(theme.secondary)
-                    .offset(x: visualRadius * 0.72, y: -visualRadius * 0.72)
+                Image(systemName: state == .locked ? "sparkle" : "crown.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(theme.secondary.color)
+                    .offset(x: visualRadius * 0.74, y: -visualRadius * 0.74)
                     .accessibilityHidden(true)
             }
         }
-        .frame(width: visualRadius * 2.8, height: visualRadius * 2.8)
+        .frame(width: visualRadius * 2.9, height: visualRadius * 2.9)
         .overlay(alignment: .bottom) {
             if state == .current {
                 Text("PLAY")
@@ -60,18 +68,14 @@ struct LevelNodeView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(theme.accent, in: Capsule())
-                    .offset(y: visualRadius + 10)
+                    .background(theme.accent.color, in: Capsule())
+                    .offset(y: visualRadius + 11)
             }
         }
-        .offset(y: state == .current && floatUp ? -4 : 0)
         .onAppear {
             guard state == .current || isHighlighted else { return }
-            withAnimation(.easeInOut(duration: 1.35).repeatForever(autoreverses: true)) {
+            withAnimation(.easeInOut(duration: 1.45).repeatForever(autoreverses: true)) {
                 pulse = true
-            }
-            withAnimation(.easeInOut(duration: 2.1).repeatForever(autoreverses: true)) {
-                floatUp = true
             }
         }
     }
@@ -80,8 +84,13 @@ struct LevelNodeView: View {
     private var innerContent: some View {
         switch state {
         case .locked:
-            Image(systemName: "lock.fill")
-                .font(.system(size: layout.isMilestone ? 16 : 13, weight: .semibold))
+            VStack(spacing: 1) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: layout.isMilestone ? 12 : 10, weight: .semibold))
+                Text("\(layout.levelID)")
+                    .font(.system(size: layout.isMilestone ? 12 : 11, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+            }
         case .completed:
             VStack(spacing: 1) {
                 Image(systemName: "checkmark")
@@ -108,33 +117,31 @@ struct LevelNodeView: View {
     private var fillColor: Color {
         switch state {
         case .locked:
-            return theme.atmosphere.opacity(0.55)
+            return theme.nodeFill.color.opacity(0.82)
         case .completed:
-            return theme.accent.opacity(0.92)
-        case .current:
-            return theme.nodeFill
-        case .available:
-            return theme.nodeFill
+            return theme.accent.color.opacity(0.92)
+        case .current, .available:
+            return theme.nodeFill.color
         }
     }
 
     private var ringColor: Color {
         switch state {
         case .locked:
-            return theme.pathDim.opacity(0.45)
+            return theme.pathDim.color.opacity(0.72)
         case .completed:
-            return theme.secondary.opacity(0.9)
+            return theme.secondary.color.opacity(0.9)
         case .current:
-            return theme.nodeGlow
+            return theme.nodeGlow.color
         case .available:
-            return theme.accent.opacity(0.85)
+            return theme.accent.color.opacity(0.88)
         }
     }
 
     private var contentColor: Color {
         switch state {
         case .locked:
-            return PathloomPalette.mutedText.opacity(0.8)
+            return PathloomPalette.mutedText
         case .completed:
             return .white
         case .current, .available:
@@ -143,6 +150,6 @@ struct LevelNodeView: View {
     }
 
     private var shadowColor: Color {
-        state == .locked ? Color.black.opacity(0.08) : theme.nodeGlow.opacity(0.35)
+        state == .locked ? Color.black.opacity(0.08) : theme.nodeGlow.color.opacity(0.34)
     }
 }

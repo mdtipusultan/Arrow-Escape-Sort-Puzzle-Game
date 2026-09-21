@@ -1,126 +1,230 @@
 import SwiftUI
 
-struct MapWorldTheme: Equatable {
-    let accent: Color
-    let secondary: Color
-    let atmosphere: Color
-    let pathLit: Color
-    let pathDim: Color
-    let terrain: Color
-    let sparkle: Color
-    let nodeFill: Color
-    let nodeGlow: Color
+struct MapRGB: Equatable, Sendable {
+    var r: Double
+    var g: Double
+    var b: Double
+
+    var color: Color { Color(red: r, green: g, blue: b) }
+
+    func mixed(with other: MapRGB, t: Double) -> MapRGB {
+        let u = min(max(t, 0), 1)
+        return MapRGB(
+            r: r + (other.r - r) * u,
+            g: g + (other.g - g) * u,
+            b: b + (other.b - b) * u
+        )
+    }
+}
+
+struct MapWorldTheme: Equatable, Sendable {
+    let accent: MapRGB
+    let secondary: MapRGB
+    let skyTop: MapRGB
+    let skyBottom: MapRGB
+    let atmosphere: MapRGB
+    let pathLit: MapRGB
+    let pathDim: MapRGB
+    let terrainFar: MapRGB
+    let terrainMid: MapRGB
+    let terrainNear: MapRGB
+    let sparkle: MapRGB
+    let nodeFill: MapRGB
+    let nodeGlow: MapRGB
+    let fog: MapRGB
+
+    func mixed(with other: MapWorldTheme, t: Double) -> MapWorldTheme {
+        MapWorldTheme(
+            accent: accent.mixed(with: other.accent, t: t),
+            secondary: secondary.mixed(with: other.secondary, t: t),
+            skyTop: skyTop.mixed(with: other.skyTop, t: t),
+            skyBottom: skyBottom.mixed(with: other.skyBottom, t: t),
+            atmosphere: atmosphere.mixed(with: other.atmosphere, t: t),
+            pathLit: pathLit.mixed(with: other.pathLit, t: t),
+            pathDim: pathDim.mixed(with: other.pathDim, t: t),
+            terrainFar: terrainFar.mixed(with: other.terrainFar, t: t),
+            terrainMid: terrainMid.mixed(with: other.terrainMid, t: t),
+            terrainNear: terrainNear.mixed(with: other.terrainNear, t: t),
+            sparkle: sparkle.mixed(with: other.sparkle, t: t),
+            nodeFill: nodeFill.mixed(with: other.nodeFill, t: t),
+            nodeGlow: nodeGlow.mixed(with: other.nodeGlow, t: t),
+            fog: fog.mixed(with: other.fog, t: t)
+        )
+    }
 
     static func theme(for sectionIndex: Int) -> MapWorldTheme {
-        switch sectionIndex {
-        case 0:
-            return MapWorldTheme(
-                accent: Color(red: 0.42, green: 0.62, blue: 0.38),
-                secondary: Color(red: 0.86, green: 0.72, blue: 0.38),
-                atmosphere: Color(red: 0.93, green: 0.89, blue: 0.76),
-                pathLit: Color(red: 0.36, green: 0.58, blue: 0.42),
-                pathDim: Color(red: 0.62, green: 0.68, blue: 0.55),
-                terrain: Color(red: 0.55, green: 0.70, blue: 0.48),
-                sparkle: Color(red: 0.95, green: 0.88, blue: 0.55),
-                nodeFill: Color(red: 0.93, green: 0.96, blue: 0.88),
-                nodeGlow: Color(red: 0.45, green: 0.70, blue: 0.42)
-            )
-        case 1:
-            return MapWorldTheme(
-                accent: Color(red: 0.28, green: 0.62, blue: 0.68),
-                secondary: Color(red: 0.55, green: 0.78, blue: 0.82),
-                atmosphere: Color(red: 0.82, green: 0.91, blue: 0.92),
-                pathLit: Color(red: 0.18, green: 0.55, blue: 0.60),
-                pathDim: Color(red: 0.58, green: 0.70, blue: 0.72),
-                terrain: Color(red: 0.40, green: 0.68, blue: 0.70),
-                sparkle: Color.white,
-                nodeFill: Color(red: 0.90, green: 0.97, blue: 0.97),
-                nodeGlow: Color(red: 0.32, green: 0.72, blue: 0.76)
-            )
-        case 2:
-            return MapWorldTheme(
-                accent: Color(red: 0.48, green: 0.38, blue: 0.66),
-                secondary: Color(red: 0.72, green: 0.52, blue: 0.78),
-                atmosphere: Color(red: 0.86, green: 0.82, blue: 0.92),
-                pathLit: Color(red: 0.46, green: 0.36, blue: 0.64),
-                pathDim: Color(red: 0.66, green: 0.62, blue: 0.74),
-                terrain: Color(red: 0.52, green: 0.44, blue: 0.68),
-                sparkle: Color(red: 0.90, green: 0.78, blue: 0.96),
-                nodeFill: Color(red: 0.94, green: 0.90, blue: 0.98),
-                nodeGlow: Color(red: 0.62, green: 0.48, blue: 0.82)
-            )
-        case 3:
-            return MapWorldTheme(
-                accent: Color(red: 0.78, green: 0.42, blue: 0.28),
-                secondary: Color(red: 0.90, green: 0.62, blue: 0.32),
-                atmosphere: Color(red: 0.94, green: 0.86, blue: 0.76),
-                pathLit: Color(red: 0.74, green: 0.40, blue: 0.26),
-                pathDim: Color(red: 0.76, green: 0.64, blue: 0.54),
-                terrain: Color(red: 0.72, green: 0.48, blue: 0.34),
-                sparkle: Color(red: 0.98, green: 0.82, blue: 0.48),
-                nodeFill: Color(red: 0.98, green: 0.93, blue: 0.86),
-                nodeGlow: Color(red: 0.88, green: 0.52, blue: 0.30)
-            )
-        case 4:
-            return MapWorldTheme(
-                accent: Color(red: 0.32, green: 0.36, blue: 0.64),
-                secondary: Color(red: 0.52, green: 0.58, blue: 0.86),
-                atmosphere: Color(red: 0.76, green: 0.78, blue: 0.90),
-                pathLit: Color(red: 0.30, green: 0.34, blue: 0.62),
-                pathDim: Color(red: 0.56, green: 0.58, blue: 0.70),
-                terrain: Color(red: 0.38, green: 0.40, blue: 0.60),
-                sparkle: Color(red: 0.82, green: 0.88, blue: 1.0),
-                nodeFill: Color(red: 0.90, green: 0.91, blue: 0.98),
-                nodeGlow: Color(red: 0.50, green: 0.56, blue: 0.90)
-            )
-        case 5:
-            return MapWorldTheme(
-                accent: Color(red: 0.22, green: 0.66, blue: 0.58),
-                secondary: Color(red: 0.58, green: 0.48, blue: 0.82),
-                atmosphere: Color(red: 0.78, green: 0.90, blue: 0.88),
-                pathLit: Color(red: 0.18, green: 0.60, blue: 0.56),
-                pathDim: Color(red: 0.54, green: 0.68, blue: 0.70),
-                terrain: Color(red: 0.30, green: 0.62, blue: 0.60),
-                sparkle: Color(red: 0.72, green: 0.95, blue: 0.86),
-                nodeFill: Color(red: 0.88, green: 0.97, blue: 0.94),
-                nodeGlow: Color(red: 0.36, green: 0.78, blue: 0.70)
-            )
-        case 6:
-            return MapWorldTheme(
-                accent: Color(red: 0.36, green: 0.58, blue: 0.78),
-                secondary: Color(red: 0.70, green: 0.84, blue: 0.92),
-                atmosphere: Color(red: 0.80, green: 0.88, blue: 0.94),
-                pathLit: Color(red: 0.28, green: 0.52, blue: 0.74),
-                pathDim: Color(red: 0.58, green: 0.68, blue: 0.76),
-                terrain: Color(red: 0.42, green: 0.62, blue: 0.76),
-                sparkle: Color(red: 0.85, green: 0.95, blue: 1.0),
-                nodeFill: Color(red: 0.90, green: 0.95, blue: 0.99),
-                nodeGlow: Color(red: 0.42, green: 0.70, blue: 0.88)
-            )
-        case 7:
-            return MapWorldTheme(
-                accent: Color(red: 0.18, green: 0.24, blue: 0.46),
-                secondary: Color(red: 0.78, green: 0.66, blue: 0.36),
-                atmosphere: Color(red: 0.22, green: 0.24, blue: 0.38),
-                pathLit: Color(red: 0.82, green: 0.70, blue: 0.38),
-                pathDim: Color(red: 0.42, green: 0.44, blue: 0.58),
-                terrain: Color(red: 0.26, green: 0.30, blue: 0.50),
-                sparkle: Color(red: 0.96, green: 0.88, blue: 0.58),
-                nodeFill: Color(red: 0.86, green: 0.88, blue: 0.96),
-                nodeGlow: Color(red: 0.90, green: 0.74, blue: 0.40)
-            )
-        default:
-            return MapWorldTheme(
-                accent: Color(red: 0.20, green: 0.48, blue: 0.50),
-                secondary: Color(red: 0.88, green: 0.76, blue: 0.42),
-                atmosphere: Color(red: 0.90, green: 0.86, blue: 0.74),
-                pathLit: Color(red: 0.18, green: 0.50, blue: 0.52),
-                pathDim: Color(red: 0.62, green: 0.66, blue: 0.58),
-                terrain: Color(red: 0.36, green: 0.56, blue: 0.54),
-                sparkle: Color(red: 0.98, green: 0.90, blue: 0.62),
-                nodeFill: Color(red: 0.95, green: 0.94, blue: 0.88),
-                nodeGlow: Color(red: 0.32, green: 0.64, blue: 0.62)
-            )
+        let themes = palette
+        if sectionIndex >= 0, sectionIndex < themes.count {
+            return themes[sectionIndex]
         }
+        return themes[themes.count - 1]
     }
+
+    static func theme(atY y: CGFloat, layout: MapLayout) -> MapWorldTheme {
+        let sections = layout.sections
+        guard let first = sections.first else { return theme(for: 0) }
+        if y >= first.yBottom { return theme(for: first.index) }
+        if let last = sections.last, y <= last.yTop { return theme(for: last.index) }
+
+        for (index, section) in sections.enumerated() {
+            if y <= section.yBottom && y >= section.yTop {
+                let span = max(section.yBottom - section.yTop, 1)
+                let t = Double((section.yBottom - y) / span)
+                let blendStart = 0.72
+                if t > blendStart, index + 1 < sections.count {
+                    let local = (t - blendStart) / (1 - blendStart)
+                    return theme(for: section.index).mixed(with: theme(for: sections[index + 1].index), t: local)
+                }
+                return theme(for: section.index)
+            }
+            if index + 1 < sections.count {
+                let next = sections[index + 1]
+                if y < section.yTop && y > next.yBottom {
+                    let span = max(section.yTop - next.yBottom, 1)
+                    let t = Double((section.yTop - y) / span)
+                    return theme(for: section.index).mixed(with: theme(for: next.index), t: t)
+                }
+            }
+        }
+        return theme(for: first.index)
+    }
+
+    private static let palette: [MapWorldTheme] = [
+        // 0 Sunthread Meadows
+        MapWorldTheme(
+            accent: MapRGB(r: 0.40, g: 0.62, b: 0.36),
+            secondary: MapRGB(r: 0.90, g: 0.74, b: 0.38),
+            skyTop: MapRGB(r: 0.97, g: 0.93, b: 0.80),
+            skyBottom: MapRGB(r: 0.86, g: 0.90, b: 0.72),
+            atmosphere: MapRGB(r: 0.95, g: 0.91, b: 0.76),
+            pathLit: MapRGB(r: 0.78, g: 0.62, b: 0.30),
+            pathDim: MapRGB(r: 0.62, g: 0.68, b: 0.52),
+            terrainFar: MapRGB(r: 0.72, g: 0.80, b: 0.58),
+            terrainMid: MapRGB(r: 0.56, g: 0.70, b: 0.44),
+            terrainNear: MapRGB(r: 0.48, g: 0.64, b: 0.38),
+            sparkle: MapRGB(r: 0.98, g: 0.90, b: 0.55),
+            nodeFill: MapRGB(r: 0.97, g: 0.97, b: 0.90),
+            nodeGlow: MapRGB(r: 0.48, g: 0.72, b: 0.40),
+            fog: MapRGB(r: 0.98, g: 0.96, b: 0.88)
+        ),
+        // 1 Verdant Loomwood
+        MapWorldTheme(
+            accent: MapRGB(r: 0.22, g: 0.52, b: 0.44),
+            secondary: MapRGB(r: 0.46, g: 0.72, b: 0.58),
+            skyTop: MapRGB(r: 0.78, g: 0.88, b: 0.82),
+            skyBottom: MapRGB(r: 0.58, g: 0.74, b: 0.66),
+            atmosphere: MapRGB(r: 0.80, g: 0.88, b: 0.82),
+            pathLit: MapRGB(r: 0.30, g: 0.58, b: 0.48),
+            pathDim: MapRGB(r: 0.50, g: 0.62, b: 0.54),
+            terrainFar: MapRGB(r: 0.38, g: 0.56, b: 0.48),
+            terrainMid: MapRGB(r: 0.26, g: 0.48, b: 0.40),
+            terrainNear: MapRGB(r: 0.20, g: 0.40, b: 0.34),
+            sparkle: MapRGB(r: 0.82, g: 0.95, b: 0.78),
+            nodeFill: MapRGB(r: 0.90, g: 0.96, b: 0.92),
+            nodeGlow: MapRGB(r: 0.34, g: 0.70, b: 0.56),
+            fog: MapRGB(r: 0.86, g: 0.92, b: 0.88)
+        ),
+        // 2 Glassbrook Vale
+        MapWorldTheme(
+            accent: MapRGB(r: 0.28, g: 0.58, b: 0.72),
+            secondary: MapRGB(r: 0.62, g: 0.52, b: 0.84),
+            skyTop: MapRGB(r: 0.80, g: 0.90, b: 0.96),
+            skyBottom: MapRGB(r: 0.70, g: 0.82, b: 0.92),
+            atmosphere: MapRGB(r: 0.82, g: 0.90, b: 0.95),
+            pathLit: MapRGB(r: 0.36, g: 0.70, b: 0.82),
+            pathDim: MapRGB(r: 0.58, g: 0.70, b: 0.78),
+            terrainFar: MapRGB(r: 0.52, g: 0.70, b: 0.82),
+            terrainMid: MapRGB(r: 0.42, g: 0.62, b: 0.76),
+            terrainNear: MapRGB(r: 0.34, g: 0.54, b: 0.70),
+            sparkle: MapRGB(r: 0.88, g: 0.96, b: 1.0),
+            nodeFill: MapRGB(r: 0.92, g: 0.97, b: 0.99),
+            nodeGlow: MapRGB(r: 0.48, g: 0.78, b: 0.90),
+            fog: MapRGB(r: 0.90, g: 0.95, b: 0.98)
+        ),
+        // 3 Nimbus Gallery
+        MapWorldTheme(
+            accent: MapRGB(r: 0.42, g: 0.62, b: 0.82),
+            secondary: MapRGB(r: 0.96, g: 0.84, b: 0.72),
+            skyTop: MapRGB(r: 0.90, g: 0.94, b: 0.98),
+            skyBottom: MapRGB(r: 0.78, g: 0.86, b: 0.94),
+            atmosphere: MapRGB(r: 0.88, g: 0.92, b: 0.96),
+            pathLit: MapRGB(r: 0.50, g: 0.68, b: 0.86),
+            pathDim: MapRGB(r: 0.64, g: 0.72, b: 0.80),
+            terrainFar: MapRGB(r: 0.70, g: 0.80, b: 0.90),
+            terrainMid: MapRGB(r: 0.62, g: 0.74, b: 0.86),
+            terrainNear: MapRGB(r: 0.54, g: 0.68, b: 0.82),
+            sparkle: MapRGB(r: 1.0, g: 1.0, b: 1.0),
+            nodeFill: MapRGB(r: 0.96, g: 0.98, b: 1.0),
+            nodeGlow: MapRGB(r: 0.56, g: 0.74, b: 0.92),
+            fog: MapRGB(r: 0.96, g: 0.97, b: 0.99)
+        ),
+        // 4 Violet Range
+        MapWorldTheme(
+            accent: MapRGB(r: 0.46, g: 0.36, b: 0.70),
+            secondary: MapRGB(r: 0.90, g: 0.58, b: 0.42),
+            skyTop: MapRGB(r: 0.62, g: 0.52, b: 0.78),
+            skyBottom: MapRGB(r: 0.42, g: 0.36, b: 0.58),
+            atmosphere: MapRGB(r: 0.70, g: 0.64, b: 0.82),
+            pathLit: MapRGB(r: 0.78, g: 0.58, b: 0.42),
+            pathDim: MapRGB(r: 0.56, g: 0.50, b: 0.66),
+            terrainFar: MapRGB(r: 0.44, g: 0.38, b: 0.60),
+            terrainMid: MapRGB(r: 0.36, g: 0.30, b: 0.50),
+            terrainNear: MapRGB(r: 0.30, g: 0.24, b: 0.42),
+            sparkle: MapRGB(r: 0.98, g: 0.82, b: 0.58),
+            nodeFill: MapRGB(r: 0.94, g: 0.90, b: 0.98),
+            nodeGlow: MapRGB(r: 0.72, g: 0.52, b: 0.88),
+            fog: MapRGB(r: 0.58, g: 0.50, b: 0.70)
+        ),
+        // 5 Oldweave Ruins
+        MapWorldTheme(
+            accent: MapRGB(r: 0.68, g: 0.48, b: 0.34),
+            secondary: MapRGB(r: 0.46, g: 0.58, b: 0.40),
+            skyTop: MapRGB(r: 0.90, g: 0.82, b: 0.70),
+            skyBottom: MapRGB(r: 0.76, g: 0.66, b: 0.52),
+            atmosphere: MapRGB(r: 0.88, g: 0.80, b: 0.68),
+            pathLit: MapRGB(r: 0.72, g: 0.52, b: 0.34),
+            pathDim: MapRGB(r: 0.66, g: 0.60, b: 0.50),
+            terrainFar: MapRGB(r: 0.70, g: 0.58, b: 0.44),
+            terrainMid: MapRGB(r: 0.60, g: 0.48, b: 0.36),
+            terrainNear: MapRGB(r: 0.52, g: 0.40, b: 0.30),
+            sparkle: MapRGB(r: 0.94, g: 0.82, b: 0.52),
+            nodeFill: MapRGB(r: 0.96, g: 0.92, b: 0.84),
+            nodeGlow: MapRGB(r: 0.80, g: 0.58, b: 0.36),
+            fog: MapRGB(r: 0.90, g: 0.84, b: 0.72)
+        ),
+        // 6 Nightloom Expanse
+        MapWorldTheme(
+            accent: MapRGB(r: 0.34, g: 0.42, b: 0.78),
+            secondary: MapRGB(r: 0.88, g: 0.74, b: 0.42),
+            skyTop: MapRGB(r: 0.18, g: 0.20, b: 0.38),
+            skyBottom: MapRGB(r: 0.10, g: 0.12, b: 0.24),
+            atmosphere: MapRGB(r: 0.22, g: 0.24, b: 0.40),
+            pathLit: MapRGB(r: 0.86, g: 0.72, b: 0.40),
+            pathDim: MapRGB(r: 0.40, g: 0.44, b: 0.60),
+            terrainFar: MapRGB(r: 0.20, g: 0.22, b: 0.40),
+            terrainMid: MapRGB(r: 0.16, g: 0.18, b: 0.34),
+            terrainNear: MapRGB(r: 0.12, g: 0.14, b: 0.28),
+            sparkle: MapRGB(r: 0.96, g: 0.90, b: 0.62),
+            nodeFill: MapRGB(r: 0.88, g: 0.90, b: 0.98),
+            nodeGlow: MapRGB(r: 0.90, g: 0.76, b: 0.42),
+            fog: MapRGB(r: 0.16, g: 0.18, b: 0.32)
+        ),
+        // 7 Aurora Spire
+        MapWorldTheme(
+            accent: MapRGB(r: 0.28, g: 0.72, b: 0.68),
+            secondary: MapRGB(r: 0.82, g: 0.46, b: 0.78),
+            skyTop: MapRGB(r: 0.16, g: 0.28, b: 0.42),
+            skyBottom: MapRGB(r: 0.10, g: 0.16, b: 0.30),
+            atmosphere: MapRGB(r: 0.20, g: 0.32, b: 0.44),
+            pathLit: MapRGB(r: 0.46, g: 0.86, b: 0.78),
+            pathDim: MapRGB(r: 0.42, g: 0.50, b: 0.64),
+            terrainFar: MapRGB(r: 0.22, g: 0.36, b: 0.46),
+            terrainMid: MapRGB(r: 0.18, g: 0.30, b: 0.40),
+            terrainNear: MapRGB(r: 0.14, g: 0.24, b: 0.34),
+            sparkle: MapRGB(r: 0.78, g: 0.96, b: 0.90),
+            nodeFill: MapRGB(r: 0.90, g: 0.96, b: 0.96),
+            nodeGlow: MapRGB(r: 0.52, g: 0.86, b: 0.80),
+            fog: MapRGB(r: 0.18, g: 0.28, b: 0.40)
+        )
+    ]
 }
